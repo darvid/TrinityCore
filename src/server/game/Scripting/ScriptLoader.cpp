@@ -1235,14 +1235,18 @@ void AddBattlegroundScripts()
 }
 
 #ifdef SCRIPTS
-/* This is where custom scripts' loading functions should be declared. */
-
+void AddSC_profession_vendor();
+void AddSC_enchant_npc();
+void AddSC_transmog_npc();
+void AddSC_twin_spire_vendor();
 #endif
 
 void AddCustomScripts()
 {
 #ifdef SCRIPTS
-    /* This is where custom scripts should be added. */
-
+AddSC_profession_vendor();
+AddSC_enchant_npc();
+AddSC_transmog_npc();
+AddSC_twin_spire_vendor();
 #endif
 }

@@ -10,6 +10,10 @@
 
 set(scripts_STAT_SRCS
   ${scripts_STAT_SRCS}
+  Custom/profession_npc.cpp
+  Custom/transmog_npc.cpp
+  Custom/enchant_npc.cpp
+  Custom/twin_spire_vendor.cpp
 )
 
 message("  -> Prepared: Custom")
