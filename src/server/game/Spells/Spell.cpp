@@ -2903,7 +2903,7 @@ bool Spell::UpdateChanneledTargetList()
     return channelTargetEffectMask == 0;
 }
 
-void Spell::prepare(SpellCastTargets const* targets, AuraEffect const* triggeredByAura)
+void Spell::prepare(SpellCastTargets const* targets, AuraEffect const* triggeredByAura, const bool instant)
 {
     if (m_CastItem)
         m_castItemGUID = m_CastItem->GetGUID();
@@ -2997,6 +2997,8 @@ void Spell::prepare(SpellCastTargets const* targets, AuraEffect const* triggered
     m_casttime = m_spellInfo->CalcCastTime(m_caster, this);
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
         m_caster->ToPlayer()->SetSpellModTakingSpell(this, false);
+
+    if (instant) m_casttime = 0;
 
     // don't allow channeled spells / spells with cast time to be casted while moving
     // (even if they are interrupted on moving, spells with almost immediate effect get to have their effect processed before movement interrupter kicks in)
