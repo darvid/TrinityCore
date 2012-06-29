@@ -293,8 +293,11 @@ void GameObject::Update(uint32 diff)
                         m_cooldownTime = time(NULL) + 10;   // Hardcoded tooltip value
                     else if (Unit* owner = GetOwner())
                     {
-                        if (owner->isInCombat())
-                            m_cooldownTime = time(NULL) + goInfo->trap.cooldown;
+                         /*
+                            Patch 3.0.2 (2008-10-14): The arming time has been
+                            reduced to 1 second, from 2 seconds for all traps.
+                        */
+                        m_cooldownTime = time(NULL) + 1;
                     }
                     m_lootState = GO_READY;
                     break;
