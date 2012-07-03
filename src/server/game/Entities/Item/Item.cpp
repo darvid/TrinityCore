@@ -26,6 +26,7 @@
 #include "SpellInfo.h"
 #include "ScriptMgr.h"
 #include "ConditionMgr.h"
+#include "TransmogMgr.h"
 
 void AddItemsSetItem(Player* player, Item* item)
 {
@@ -252,7 +253,7 @@ Item::Item()
     m_paidMoney = 0;
     m_paidExtendedCost = 0;
 
-    m_fakeDisplayEntry = 0;
+    m_transmogrifiedEntry = 0;
 }
 
 bool Item::Create(uint32 guidlow, uint32 itemid, Player const* owner)
@@ -459,8 +460,8 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, Field* fields, uint32 entr
     SetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME, fields[9].GetUInt32());
     SetText(fields[10].GetString());
 
-    if (uint32 fakeEntry = sObjectMgr->GetFakeItemEntry(guid))
-        SetFakeDisplay(fakeEntry);
+    if (uint32 newEntry = sTransmogMgr->GetTransmogrifiedItemEntry(guid))
+        SetTransmog(newEntry);
 
     if (need_save)                                           // normal item changed state set not work at loading
     {
@@ -478,7 +479,7 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, Field* fields, uint32 entr
 /*static*/
 void Item::DeleteFromDB(SQLTransaction& trans, uint32 itemGuid)
 {
-    sObjectMgr->RemoveFakeItem(itemGuid);
+    sTransmogMgr->RemoveTransmogrifiedItem(itemGuid);
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
     stmt->setUInt32(0, itemGuid);
     trans->Append(stmt);
@@ -486,7 +487,7 @@ void Item::DeleteFromDB(SQLTransaction& trans, uint32 itemGuid)
 
 void Item::DeleteFromDB(SQLTransaction& trans)
 {
-    RemoveFakeDisplay();
+    RemoveTransmog();
     DeleteFromDB(trans, GetGUIDLow());
 }
 
@@ -1204,55 +1205,40 @@ bool Item::CheckSoulboundTradeExpire()
     return false;
 }
 
-FakeResult Item::SetFakeDisplay(uint32 iEntry)
+TransmogResult Item::Transmogrify(uint32 newEntry)
 {
-    if (!iEntry)
+    if (!newEntry)
     {
-        RemoveFakeDisplay();
-        return FAKE_ERR_OK;
+        GetTransmog();
+        return TRANSMOG_ERR_OK;
     }
 
-    ItemTemplate const* myTmpl    = GetTemplate();
-    ItemTemplate const* otherTmpl = sObjectMgr->GetItemTemplate(iEntry);
+    ItemTemplate const* otherTmpl = sObjectMgr->GetItemTemplate(newEntry);
 
     if (!otherTmpl)
-        return FAKE_ERR_CANT_FIND_ITEM;
+        return TRANSMOG_ERR_CANT_FIND_ITEM;
 
-    /*
-    if (myTmpl->InventoryType != otherTmpl->InventoryType)
-        return FAKE_ERR_DIFF_SLOTS;
+    if (otherTmpl->Quality == ITEM_QUALITY_POOR)
+        return TRANSMOG_ERR_WRONG_QUALITY;
 
-    if (myTmpl->AllowableClass != otherTmpl->AllowableClass)
-        return FAKE_ERR_DIFF_CLASS;
-
-    if (myTmpl->AllowableRace != otherTmpl->AllowableRace)
-        return FAKE_ERR_DIFF_RACE;
-    */
-
-    if (otherTmpl->Quality == ITEM_QUALITY_LEGENDARY || otherTmpl->Quality == ITEM_QUALITY_POOR)
-        return FAKE_ERR_WRONG_QUALITY;
-
-    if (m_fakeDisplayEntry != iEntry)
+    if (m_transmogrifiedEntry != newEntry)
     {
-        sObjectMgr->SetFakeItem(GetGUIDLow(), iEntry);
-   
-        CharacterDatabase.PExecute("INSERT INTO fake_items VALUES (%u, %u) ON DUPLICATE KEY UPDATE fakeEntry=%u",
-            GetGUIDLow(), iEntry, iEntry);
-        /*
-        (!m_fakeDisplayEntry) ? CharacterDatabase.PExecute("INSERT INTO fake_items VALUES (%u, %u)", GetGUIDLow(), iEntry) :
-                                CharacterDatabase.PExecute("UPDATE fake_items SET fakeEntry = %u WHERE guid = %u", iEntry, GetGUIDLow());
-        */
-        m_fakeDisplayEntry = iEntry;
+        sTransmogMgr->SetTransmogrifiedItem(GetGUIDLow(), newEntry);
+        CharacterDatabase.PExecute("INSERT INTO `" TRANSMOG_ITEMS_TABLE "` " 
+            "VALUES (%u, %u) ON DUPLICATE KEY UPDATE entry=%u", 
+            GetGUIDLow(), newEntry, newEntry);
+        m_transmogrifiedEntry = newEntry;
     }
 
-    return FAKE_ERR_OK;
+    return TRANSMOG_ERR_OK;
 }
 
-void Item::RemoveFakeDisplay()
+void Item::RemoveTransmog()
 {
-    if (GetFakeDisplayEntry())
+    if (GetTransmog())
     {
-        m_fakeDisplayEntry = 0;
-        CharacterDatabase.PExecute("DELETE FROM fake_items WHERE guid = %u", GetGUIDLow());
+        SetTransmog(0);
+        CharacterDatabase.PExecute("DELETE FROM `" TRANSMOG_ITEMS_TABLE "` "
+            "WHERE `guid` = %u", GetGUIDLow());
     }
 }

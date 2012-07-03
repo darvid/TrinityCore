@@ -152,15 +152,17 @@ enum SellResult
     SELL_ERR_ONLY_EMPTY_BAG                      = 6        // can only do with empty bags
 };
 
-enum FakeResult
+enum TransmogResult
 {
-    FAKE_ERR_CANT_FIND_OWNER,
-    FAKE_ERR_CANT_FIND_ITEM,
-    FAKE_ERR_WRONG_QUALITY,
-    FAKE_ERR_DIFF_SLOTS,
-    FAKE_ERR_DIFF_CLASS,
-    FAKE_ERR_DIFF_RACE,
-    FAKE_ERR_OK
+    TRANSMOG_ERR_UNMET_REQUIREMENTS,
+    TRANSMOG_ERR_CANT_FIND_ITEM,
+    TRANSMOG_ERR_UNEQUIPPED_ITEM,
+    TRANSMOG_ERR_WRONG_QUALITY,
+    TRANSMOG_ERR_DIFF_SLOTS,
+    TRANSMOG_ERR_INVALID_SLOT,
+    TRANSMOG_ERR_INVALID_SET,
+    TRANSMOG_ERR_NO_SETS,
+    TRANSMOG_ERR_OK
 };
 
 // -1 from client enchantment slot number
@@ -353,9 +355,10 @@ class Item : public Object
 
         uint32 GetScriptId() const { return GetTemplate()->ScriptId; }
 
-        FakeResult SetFakeDisplay(uint32 iEntry);
-        uint32 GetFakeDisplayEntry() { return m_fakeDisplayEntry; }
-        void RemoveFakeDisplay();
+        TransmogResult Transmogrify(uint32 newEntry);
+        void SetTransmog(uint32 newEntry) { m_transmogrifiedEntry = newEntry; }
+        uint32 GetTransmog() { return m_transmogrifiedEntry; }
+        void RemoveTransmog();
     private:
         std::string m_text;
         uint8 m_slot;
@@ -369,6 +372,6 @@ class Item : public Object
         uint32 m_paidExtendedCost;
         AllowedLooterSet allowedGUIDs;
 
-        uint32 m_fakeDisplayEntry;
+        uint32 m_transmogrifiedEntry;
 };
 #endif
