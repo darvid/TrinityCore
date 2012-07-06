@@ -11,7 +11,6 @@ EndScriptData */
 #include <sstream>
 #include <vector>
 
-
 class transmog_npc : public CreatureScript
 {
     public:
@@ -30,6 +29,9 @@ class transmog_npc : public CreatureScript
                 gossip_text << " - ";
                 gossip_text << (*set)[TRANSMOG_FIELD_RATING];
                 gossip_text << " rating";
+
+                if (TransmogMgr::CanAfford(player, &(*set)))
+                    gossip_text << " [unlocked]";
 
                 player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, gossip_text.str(),
                     GOSSIP_SENDER_MAIN, (*set)[TRANSMOG_FIELD_ENTRY]);

@@ -859,6 +859,28 @@ void ArenaTeam::SaveToDB()
         stmt->setUInt8(1, GetSlot());
         stmt->setUInt16(2, itr->MatchMakerRating);
         trans->Append(stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_LIFETIME_ARENA);
+        stmt->setUInt16(0, itr->WeekWins);
+        stmt->setUInt16(1, itr->WeekGames - itr->WeekWins);
+        stmt->setUInt16(2, itr->SeasonWins);
+        stmt->setUInt16(3, itr->SeasonGames - itr->SeasonWins);
+        stmt->setUInt16(4, itr->PersonalRating);
+        stmt->setUInt16(5, Stats.Rating);
+        stmt->setUInt16(6, itr->MatchMakerRating);
+        stmt->setUInt16(7, Stats.Rank);
+        stmt->setUInt32(8, GUID_LOPART(itr->Guid));
+        stmt->setUInt8(9, GetSlot());
+        stmt->setUInt16(10, itr->PersonalRating);
+        trans->Append(stmt);
+
+        if (Player* player = ObjectAccessor::FindPlayer(itr->Guid))
+            if (player->GetLifetimeStats(GetSlot()).PersonalRating < 
+                itr->PersonalRating)
+                player->SetLifetimeStats(GetSlot(), itr->WeekWins, 
+                    itr->WeekGames - itr->WeekWins, itr->SeasonWins,
+                    itr->SeasonGames - itr->SeasonWins, itr->PersonalRating,
+                    Stats.Rating, itr->MatchMakerRating, Stats.Rank);
     }
 
     CharacterDatabase.CommitTransaction(trans);

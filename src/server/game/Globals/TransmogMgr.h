@@ -1,6 +1,7 @@
 #ifndef _TRANSMOGMGR_H
 #define _TRANSMOGMGR_H
 
+#include "ArenaTeam.h"
 #include "Log.h"
 #include "Creature.h"
 #include "Player.h"
@@ -41,6 +42,7 @@ class TransmogMgr
 
         void LoadTransmog();
 
+        static bool CanAfford(Player* player, const std::vector<uint32>* setInfo);
         TransmogSets GetAllSets(RaceClass raceClass) {
             TransmogSetsContainer::const_iterator it = _transmogSetStore.find(
                 raceClass);

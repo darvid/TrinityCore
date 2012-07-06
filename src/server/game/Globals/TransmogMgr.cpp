@@ -3,6 +3,12 @@
 #include "DatabaseEnv.h"
 #include "TransmogMgr.h"
 
+uint8 NormalizedArenaBrackets[3] = {
+    ARENA_TEAM_2v2, 
+    ARENA_TEAM_3v3, 
+    ARENA_TEAM_5v5
+};
+
 TransmogMgr::TransmogMgr() { }
 TransmogMgr::~TransmogMgr() {
     _transmogSetStore.clear();
@@ -39,6 +45,18 @@ int8 TransmogMgr::TransmogFieldForSlot(int8 slot)
         default:
             return -1;
     }
+}
+
+bool TransmogMgr::CanAfford(Player* player, const std::vector<uint32>* setInfo)
+{
+    uint32 bracket = setInfo->at(TRANSMOG_FIELD_BRACKET);
+    if (player->GetLifetimeStats(bracket).PersonalRating >= 
+            setInfo->at(TRANSMOG_FIELD_RATING)
+        || player->GetArenaPersonalRating(bracket)
+            >= setInfo->at(TRANSMOG_FIELD_RATING)
+        || (!AccountMgr::IsPlayerAccount(player->GetSession()->GetSecurity())))
+        return true;
+    return false;
 }
 
 TransmogResult TransmogMgr::TransmogItem(Player* player, uint32 newEntry,
@@ -91,18 +109,15 @@ TransmogResult TransmogMgr::TransmogSet(Player* player, RaceClass raceClass,
     std::vector<uint32> setInfo;
     for (int setNo = 0; setNo != it->second.size(); ++setNo)
     {
-        // have to iterate somewhere, better to do it here with a subset of
-        // total transmog sets (for specific race-class combination) than over
-        // *all* sets (when the primary key is the entry field). this is 
-        // probably slightly more efficient when there's a few hundred sets.
         if (it->second[setNo][TRANSMOG_FIELD_ENTRY] == setId)
+        {
             setInfo = it->second[setNo];
+            break;
+        }
     }
     if (setInfo.empty()) return TRANSMOG_ERR_INVALID_SET;
 
-    if (player->GetArenaPersonalRating(setInfo[TRANSMOG_FIELD_BRACKET])
-            < setInfo[TRANSMOG_FIELD_RATING]
-        && AccountMgr::IsPlayerAccount(player->GetSession()->GetSecurity()))
+    if (!CanAfford(player, &setInfo))
         return TRANSMOG_ERR_UNMET_REQUIREMENTS;
 
     EquipmentSlots equipmentSet[8] = {

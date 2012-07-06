@@ -806,6 +806,7 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOADQUESTSTATUSREW       = 29,
     PLAYER_LOGIN_QUERY_LOADINSTANCELOCKTIMES    = 30,
     PLAYER_LOGIN_QUERY_LOADSEASONALQUESTSTATUS  = 31,
+    PLAYER_LOGIN_QUERY_LOADLIFETIMEARENASTATS   = 32,
     MAX_PLAYER_LOGIN_QUERY,
 };
 
@@ -1055,6 +1056,18 @@ private:
     uint8 _maxLevel;
     bool _isBattleGround;
     bool _isPvP;
+};
+
+struct LifetimeArenaStats
+{
+    uint16 WeekWins;
+    uint16 WeekLosses;
+    uint16 SeasonWins;
+    uint16 SeasonLosses;
+    uint16 PersonalRating;
+    uint16 TeamRating;
+    uint16 MatchMakerRating;
+    uint16 Rank;
 };
 
 class Player : public Unit, public GridObject<Player>
@@ -2528,7 +2541,17 @@ class Player : public Unit, public GridObject<Player>
             }
         }
 
+        void SetLifetimeStats(uint8 bracket, uint16 weekWins, uint16 weekLosses,
+                              uint16 seasonWins, uint16 seasonLosses, 
+                              uint16 personalRating, uint16 teamRating, 
+                              uint16 matchMakerRating, uint16 rank);
+        LifetimeArenaStats GetLifetimeStats(uint8 bracket) { 
+            return m_lifetimeArenaStats[bracket];
+        }
+
     protected:
+        LifetimeArenaStats m_lifetimeArenaStats[3];
+    
         // Gamemaster whisper whitelist
         WhisperListContainer WhisperList;
         uint32 m_regenTimerCount;
@@ -2598,6 +2621,7 @@ class Player : public Unit, public GridObject<Player>
         void _LoadGlyphs(PreparedQueryResult result);
         void _LoadTalents(PreparedQueryResult result);
         void _LoadInstanceTimeRestrictions(PreparedQueryResult result);
+        void _LoadLifetimeArenaStats(PreparedQueryResult result);
 
         /*********************************************************/
         /***                   SAVE SYSTEM                     ***/

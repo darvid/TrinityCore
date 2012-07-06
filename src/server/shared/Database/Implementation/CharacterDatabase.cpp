@@ -297,6 +297,12 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PREPARE_STATEMENT(CHAR_REP_CHARACTER_ARENA_STATS, "REPLACE INTO character_arena_stats (guid, slot, matchMakerRating) VALUES (?, ?, ?)", CONNECTION_ASYNC);
     PREPARE_STATEMENT(CHAR_SEL_PLAYER_ARENA_TEAMS, "SELECT arena_team_member.arenaTeamId FROM arena_team_member JOIN arena_team ON arena_team_member.arenaTeamId = arena_team.arenaTeamId WHERE guid = ?", CONNECTION_SYNCH);
 
+    // Lifetime arena stats
+    PREPARE_STATEMENT(CHAR_SEL_LIFETIME_ARENA, "SELECT bracket, week_wins, week_losses, season_wins, season_losses, personal_rating, team_rating, mmr, rank FROM lifetime_arena_stats WHERE player_guid = ?", CONNECTION_ASYNC);
+    PREPARE_STATEMENT(CHAR_INS_LIFETIME_ARENA, "INSERT INTO lifetime_arena_stats (player_guid, bracket, week_wins, week_losses, season_wins, season_losses, personal_rating, team_rating, mmr, rank) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+    PREPARE_STATEMENT(CHAR_DEL_LIFETIME_ARENA, "DELETE FROM lifetime_arena_stats WHERE player_guid = ? AND bracket = ?", CONNECTION_ASYNC);
+    PREPARE_STATEMENT(CHAR_UPD_LIFETIME_ARENA, "UPDATE lifetime_arena_stats SET week_wins = ?, week_losses = ?, season_wins = ?, season_losses = ?, personal_rating = ?, team_rating = ?, mmr = ?, rank = ? WHERE player_guid = ? AND bracket = ? AND personal_rating < ?", CONNECTION_ASYNC);
+
     // Character battleground data
     PREPARE_STATEMENT(CHAR_INS_PLAYER_BGDATA, "INSERT INTO character_battleground_data (guid, instanceId, team, joinX, joinY, joinZ, joinO, joinMapId, taxiStart, taxiEnd, mountSpell) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC)
     PREPARE_STATEMENT(CHAR_DEL_PLAYER_BGDATA, "DELETE FROM character_battleground_data WHERE guid = ?", CONNECTION_ASYNC)

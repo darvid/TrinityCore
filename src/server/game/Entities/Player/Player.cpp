@@ -16724,6 +16724,53 @@ void Player::_LoadBGData(PreparedQueryResult result)
     m_bgData.mountSpell   = fields[9].GetUInt32();
 }
 
+void Player::_LoadLifetimeArenaStats(PreparedQueryResult result)
+{
+    if (!result)
+    {
+        SQLTransaction trans = CharacterDatabase.BeginTransaction();
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_LIFETIME_ARENA);
+
+#define STMT_INS_LIFETIME_ARENA(bracket) stmt = \
+        CharacterDatabase.GetPreparedStatement(CHAR_INS_LIFETIME_ARENA); \
+        stmt->setUInt32(0, GUID_LOPART(GetGUIDLow())); \
+        stmt->setUInt8(1, bracket); \
+        stmt->setUInt16(2, 0); \
+        stmt->setUInt16(3, 0); \
+        stmt->setUInt16(4, 0); \
+        stmt->setUInt16(5, 0); \
+        stmt->setUInt16(6, 0); \
+        stmt->setUInt16(7, 0); \
+        stmt->setUInt16(8, 0); \
+        stmt->setUInt16(9, 0); \
+        stmt->setUInt16(10, 0); \
+        m_lifetimeArenaStats[bracket] = {}; \
+        trans->Append(stmt);
+
+        STMT_INS_LIFETIME_ARENA(0);
+        STMT_INS_LIFETIME_ARENA(1);
+        STMT_INS_LIFETIME_ARENA(2);
+
+        CharacterDatabase.CommitTransaction(trans);
+        return;
+    }
+
+    do
+    {
+        Field* fields = result->Fetch();
+        uint8 bracket = fields[0].GetUInt8();
+        m_lifetimeArenaStats[bracket].WeekWins         = fields[1].GetUInt16();
+        m_lifetimeArenaStats[bracket].WeekLosses       = fields[2].GetUInt16();
+        m_lifetimeArenaStats[bracket].SeasonWins       = fields[3].GetUInt16();
+        m_lifetimeArenaStats[bracket].SeasonLosses     = fields[4].GetUInt16();
+        m_lifetimeArenaStats[bracket].PersonalRating   = fields[5].GetUInt16();
+        m_lifetimeArenaStats[bracket].TeamRating       = fields[6].GetUInt16();
+        m_lifetimeArenaStats[bracket].MatchMakerRating = fields[7].GetUInt16();
+        m_lifetimeArenaStats[bracket].Rank             = fields[8].GetUInt16();
+    }
+    while (result->NextRow());
+}
+
 bool Player::LoadPositionFromDB(uint32& mapid, float& x, float& y, float& z, float& o, bool& in_flight, uint64 guid)
 {
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_POSITION);
@@ -16961,6 +17008,7 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
     _LoadBoundInstances(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADBOUNDINSTANCES));
     _LoadInstanceTimeRestrictions(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADINSTANCELOCKTIMES));
     _LoadBGData(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADBGDATA));
+    _LoadLifetimeArenaStats(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADLIFETIMEARENASTATS));
 
     GetSession()->SetPlayer(this);
     MapEntry const* mapEntry = sMapStore.LookupEntry(mapId);
@@ -25656,4 +25704,20 @@ void Player::SendMovementSetFeatherFall(bool apply)
     data.append(GetPackGUID());
     data << uint32(0);          //! movement counter
     SendDirectMessage(&data);
+}
+
+void Player::SetLifetimeStats(uint8 bracket, uint16 weekWins, uint16 weekLosses,
+                              uint16 seasonWins, uint16 seasonLosses, 
+                              uint16 personalRating, uint16 teamRating, 
+                              uint16 matchMakerRating, uint16 rank)
+{
+    LifetimeArenaStats stats = m_lifetimeArenaStats[bracket];
+    stats.WeekWins         = weekWins;
+    stats.WeekLosses       = weekLosses;
+    stats.SeasonWins       = seasonWins;
+    stats.SeasonLosses     = seasonLosses;
+    stats.PersonalRating   = personalRating;
+    stats.TeamRating       = teamRating;
+    stats.MatchMakerRating = matchMakerRating;
+    stats.Rank             = rank;
 }
