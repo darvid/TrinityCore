@@ -481,6 +481,9 @@ class Spell
         void CleanupTargetList();
 
         void SetSpellValue(SpellValueMod mod, int32 value);
+
+        bool IsIgnoringMountState() { return m_ignoreMountState; }
+        void SetIgnoreMountState(bool yes) { m_ignoreMountState = yes; }
     protected:
         bool HasGlobalCooldown() const;
         void TriggerGlobalCooldown();
@@ -668,6 +671,8 @@ class Spell
         uint8 m_auraScaleMask;
 
         ByteBuffer * m_effectExecuteData[MAX_SPELL_EFFECTS];
+
+        bool m_ignoreMountState;
 
 #ifdef MAP_BASED_RAND_GEN
         int32 irand(int32 min, int32 max)       { return int32 (m_caster->GetMap()->mtRand.randInt(max - min)) + min; }

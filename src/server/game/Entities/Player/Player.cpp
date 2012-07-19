@@ -8506,20 +8506,18 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
     }
 }
 
-void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8 cast_count, uint32 glyphIndex)
+void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8 cast_count, uint32 glyphIndex, bool ignoreMountState)
 {
     ItemTemplate const* proto = item->GetTemplate();
 
-    bool instant = false;
-    if ((proto->Class == ITEM_CLASS_GLYPH) ||
+    bool instant = ((proto->Class == ITEM_CLASS_GLYPH) ||
         (proto->Class == ITEM_CLASS_CONSUMABLE && (
             proto->SubClass == ITEM_SUBCLASS_ITEM_ENHANCEMENT ||
             proto->SubClass == ITEM_SUBCLASS_CONSUMABLE_OTHER)) ||
         (proto->Class == ITEM_CLASS_TRADE_GOODS && (
             proto->SubClass == ITEM_SUBCLASS_ARMOR_ENCHANTMENT ||
             proto->SubClass == ITEM_SUBCLASS_WEAPON_ENCHANTMENT ||
-            proto->SubClass == ITEM_SUBCLASS_ENCHANTING)))
-        instant = true;
+            proto->SubClass == ITEM_SUBCLASS_ENCHANTING))) ? true : false;
 
     // special learning case
     if (proto->Spells[0].SpellId == 483 || proto->Spells[0].SpellId == 55884)
@@ -8536,6 +8534,7 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8
         }
 
         Spell* spell = new Spell(this, spellInfo, TRIGGERED_NONE);
+        spell->SetIgnoreMountState(ignoreMountState);
         spell->m_CastItem = item;
         spell->m_cast_count = cast_count;                   //set count of casts
         spell->SetSpellValue(SPELLVALUE_BASE_POINT0, learning_spell_id);
@@ -8567,6 +8566,7 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8
         }
 
         Spell* spell = new Spell(this, spellInfo, (count > 0) ? TRIGGERED_FULL_MASK : TRIGGERED_NONE);
+        spell->SetIgnoreMountState(ignoreMountState);
         spell->m_CastItem = item;
         spell->m_cast_count = cast_count;                   // set count of casts
         spell->m_glyphIndex = glyphIndex;                   // glyph index

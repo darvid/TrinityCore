@@ -145,17 +145,12 @@ enum Enchants
     ENCHANT_RANGED_SUN_SCOPE            = 3607
 };
 
-Item* PlayerAddItem(Player* player, uint32 item_id, int32 count = 1)
+Item* PlayerAddItem(Player* player, uint32 item_id)
 {
-    if (count < 0)
-    {
-        player->DestroyItemCount(item_id, -count, true, false);
-        return NULL;
-    }
-
+    uint8 count = 1;
     uint32 noSpaceForCount = 0;
     ItemPosCountVec dest;
-    
+
     InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, 
         dest, item_id, count, &noSpaceForCount);
     if (msg != EQUIP_ERR_OK)
@@ -163,23 +158,22 @@ Item* PlayerAddItem(Player* player, uint32 item_id, int32 count = 1)
 
     Item* item = player->StoreNewItem(dest, item_id, true, 
         Item::GenerateItemRandomPropertyId(item_id));
-    // Item* enchant_item = Item::CreateItem(41611, 1, player);
-    // player->SendNewItem(enchant_item, 1, false, true);
+
     if (noSpaceForCount > 0)
     {
-        player->GetSession()->SendNotification("Please make room in your inventory first.");
+        player->GetSession()->SendNotification("Please make room in your "
+            "inventory first.");
         return NULL;
     }
     return item;
 }
 
-void EnchantWithItem(Player* player, uint32 item_id)
+void EnchantWithItem(Player* player, uint32 item_id, Item* target)
 {
     Item* item = PlayerAddItem(player, item_id);
     SpellCastTargets* targets = new SpellCastTargets();
-    targets->SetItemTarget(item);
-    player->CastItemUseSpell(item, *targets, 
-        (uint8)1, (uint32)0);
+    targets->SetItemTarget(target);
+    player->CastItemUseSpell(item, *targets, 1, 0, true);
 }
 
 void EnchantWithSpell(Player* player, uint32 spell_id, Item* item)
@@ -194,14 +188,7 @@ void Enchant(Player* player, Creature* creature, Item* item, uint32 enchantid)
 {
     if (!item)
     {
-        player->GetSession()->SendNotification("You must first equip the item you are trying to enchant in order to make use of it.");
-        return;
-    }
-
-    if (!enchantid)
-    {
-        player->GetSession()->SendNotification("Something went wrong in the code. It has been logged for developers and will be looked into, sorry for the inconvenience.");
-        sLog->outError("enchant_vendor::Enchant: Enchant NPC 'enchantid' is NULL, something went wrong here!");
+        player->GetSession()->SendNotification("Please equip an item first.");
         return;
     }
 
@@ -242,24 +229,6 @@ void Enchant(Player* player, Creature* creature, Item* item, uint32 enchantid)
             break;
     }
 
-    /*
-    if (item->GetSlot() == EQUIPMENT_SLOT_MAINHAND &&
-        item->GetEnchantmentId(PERM_ENCHANTMENT_SLOT) != 0)
-    {
-        Item* offhand = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-        if (offhand->GetEnchantmentId(PERM_ENCHANTMENT_SLOT) == 0)
-            item = offhand;
-    }
-
-    if (item->GetSlot() == EQUIPMENT_SLOT_FINGER1 &&
-        item->GetEnchantmentId(PERM_ENCHANTMENT_SLOT) != 0)
-    {
-        Item* ring2 = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_FINGER2);
-        if (ring2->GetEnchantmentId(PERM_ENCHANTMENT_SLOT) == 0)
-            item = ring2;
-    }
-    */
-
     player->ApplyEnchantment(item, PERM_ENCHANTMENT_SLOT, false);
     item->ClearEnchantment(PERM_ENCHANTMENT_SLOT);
     item->SetEnchantment(PERM_ENCHANTMENT_SLOT, enchantid, 0, 0);
@@ -268,21 +237,17 @@ void Enchant(Player* player, Creature* creature, Item* item, uint32 enchantid)
     switch (enchantid)
     {
         case ENCHANT_BELT_ETERNAL_BELT_BUCKLE:
-            EnchantWithItem(player, 41611);
+            EnchantWithItem(player, 41611, item);
             break;
         case ENCHANT_BRACER_SOCKET_BRACER:
-            // PlayerAddItem(player, 36913, 4);
-            // PlayerAddItem(player, 35624);
             PlayerAddItem(player, 5956); // Blacksmith hammer
             EnchantWithSpell(player, 55628, item);
-            PlayerAddItem(player, 5956, -1);
+            player->DestroyItemCount(5956, -1, true, false);
             break;
         case ENCHANT_GLOVES_SOCKET_GLOVES:
-            // PlayerAddItem(player, 36913, 4);
-            // PlayerAddItem(player, 35624);
             PlayerAddItem(player, 5956); // Blacksmith hammer
             EnchantWithSpell(player, 55641, item);
-            PlayerAddItem(player, 5956, -1);
+            player->DestroyItemCount(5956, -1, true, false);
             break;
     }
     
