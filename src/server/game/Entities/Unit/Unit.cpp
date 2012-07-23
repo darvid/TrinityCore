@@ -826,7 +826,18 @@ void Unit::CastSpell(SpellCastTargets const& targets, SpellInfo const* spellInfo
             spell->SetSpellValue(itr->first, itr->second);
 
     spell->m_CastItem = castItem;
-    spell->prepare(&targets, triggeredByAura);
+    spell->prepare(&targets, triggeredByAura, (
+        spellInfo->IsAbilityOfSkillType(SKILL_ALCHEMY)
+        || spellInfo->IsAbilityOfSkillType(SKILL_BLACKSMITHING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_ENCHANTING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_ENGINEERING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_INSCRIPTION)
+        || spellInfo->IsAbilityOfSkillType(SKILL_JEWELCRAFTING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_LEATHERWORKING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_TAILORING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_COOKING)
+        || spellInfo->IsAbilityOfSkillType(SKILL_FIRST_AID)
+    ) ? true : false);
 }
 
 void Unit::CastSpell(Unit* victim, uint32 spellId, bool triggered, Item* castItem, AuraEffect const* triggeredByAura, uint64 originalCaster)
