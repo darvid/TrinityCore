@@ -50,10 +50,10 @@ enum CharterItemIDs
 
 enum CharterCosts
 {
-    GUILD_CHARTER_COST                            = 1000,
-    ARENA_TEAM_CHARTER_2v2_COST                   = 800000,
-    ARENA_TEAM_CHARTER_3v3_COST                   = 1200000,
-    ARENA_TEAM_CHARTER_5v5_COST                   = 2000000
+    GUILD_CHARTER_COST                            = 0,
+    ARENA_TEAM_CHARTER_2v2_COST                   = 0,
+    ARENA_TEAM_CHARTER_3v3_COST                   = 0,
+    ARENA_TEAM_CHARTER_5v5_COST                   = 0
 };
 
 void WorldSession::HandlePetitionBuyOpcode(WorldPacket & recv_data)
@@ -832,6 +832,7 @@ void WorldSession::HandleTurnInPetitionOpcode(WorldPacket & recv_data)
     else
         signatures = 0;
 
+    /*
     uint32 requiredSignatures;
     if (type == GUILD_CHARTER_TYPE)
         requiredSignatures = sWorld->getIntConfig(CONFIG_MIN_PETITION_SIGNS);
@@ -846,6 +847,7 @@ void WorldSession::HandleTurnInPetitionOpcode(WorldPacket & recv_data)
         SendPacket(&data);
         return;
     }
+    */
 
     // Proceed with guild/arena team creation
 
