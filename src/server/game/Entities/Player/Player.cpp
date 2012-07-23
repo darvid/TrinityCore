@@ -25709,8 +25709,8 @@ void Player::SendMovementSetFeatherFall(bool apply)
 }
 
 void Player::SetLifetimeStats(uint8 bracket, uint16 weekWins, uint16 weekLosses,
-                              uint16 seasonWins, uint16 seasonLosses, 
-                              uint16 personalRating, uint16 teamRating, 
+                              uint16 seasonWins, uint16 seasonLosses,
+                              uint16 personalRating, uint16 teamRating,
                               uint16 matchMakerRating, uint16 rank)
 {
     LifetimeArenaStats stats = m_lifetimeArenaStats[bracket];
