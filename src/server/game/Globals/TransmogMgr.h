@@ -15,6 +15,8 @@
 enum TransmogSetFields
 {
     TRANSMOG_FIELD_ENTRY,
+    TRANSMOG_FIELD_ACCOUNTID,
+    TRANSMOG_FIELD_EMPTY,
     TRANSMOG_FIELD_CLASS,
     TRANSMOG_FIELD_RACE,
     TRANSMOG_FIELD_RATING,
@@ -41,17 +43,35 @@ class TransmogMgr
         typedef std::vector<std::vector<uint32> > TransmogSets;
 
         void LoadTransmog();
+        void LoadCustomSets(uint32 accountId);
+        const int GetNumTransmogSets() { return _transmogSetStore.size(); }
+        const int GetNumCustomTransmogSets() {
+            return _transmogCustomSetStore.size(); 
+        }
+        const int GetTotalTransmogSets() {
+            return GetNumTransmogSets() + GetNumCustomTransmogSets();
+        }
 
         static bool CanAfford(Player* player, const std::vector<uint32>* setInfo);
         TransmogSets GetAllSets(RaceClass raceClass) {
-            TransmogSetsContainer::const_iterator it = _transmogSetStore.find(
-                raceClass);
-            return it->second;
+            TransmogSetsContainer::const_iterator it;
+            return _transmogSetStore.find(raceClass)->second;
         };
+        const TransmogSets* GetAllSets(uint32 accountId) {
+            TransmogCustomSetsContainer::const_iterator it;
+            it = _transmogCustomSetStore.find(accountId);
+            if (it != _transmogCustomSetStore.end())
+                return &it->second;
+        }
+
         TransmogResult TransmogItem(Player* player, uint32 newEntry,
                                     int8 slot, bool silent = false);
         TransmogResult TransmogSet(Player* player, RaceClass raceClass,
                                    uint32 setId);
+        TransmogResult TransmogSet(Player* player, uint32 accountId,
+                                   uint32 setId);
+        TransmogResult TransmogSet(Player* player, const std::vector<uint32>* setinfo);
+        bool SaveCustomSet(Player* player, uint32 accountId, uint32 setId);
 
         uint32 GetTransmogrifiedItemEntry(uint32 itemGuid);
         void RemoveTransmogrifiedItem(uint32 itemGuid);
@@ -60,6 +80,9 @@ class TransmogMgr
     private:
         typedef std::map<RaceClass, TransmogSets> TransmogSetsContainer;
         TransmogSetsContainer _transmogSetStore;
+        
+        typedef std::map<uint32, TransmogSets> TransmogCustomSetsContainer;
+        TransmogCustomSetsContainer _transmogCustomSetStore;
 
         typedef std::map<uint32, uint32> TransmogrifiedItemsContainer;
         TransmogrifiedItemsContainer _transmogrifiedItemsStore;

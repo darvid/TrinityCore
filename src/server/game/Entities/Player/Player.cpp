@@ -74,6 +74,7 @@
 #include "InstanceScript.h"
 #include <cmath>
 #include "AccountMgr.h"
+#include "TransmogMgr.h"
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
@@ -17469,6 +17470,7 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
     m_achievementMgr.CheckAllAchievementCriteria();
 
     _LoadEquipmentSets(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADEQUIPMENTSETS));
+    sTransmogMgr->LoadCustomSets(GetSession()->GetAccountId());
 
     return true;
 }

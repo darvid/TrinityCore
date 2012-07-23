@@ -108,26 +108,47 @@ TransmogResult TransmogMgr::TransmogSet(Player* player, RaceClass raceClass,
 
     std::vector<uint32> setInfo;
     for (int setNo = 0; setNo != it->second.size(); ++setNo)
-    {
         if (it->second[setNo][TRANSMOG_FIELD_ENTRY] == setId)
+            return TransmogSet(player, &it->second[setNo]);
+
+    return TransmogSet(player, player->GetSession()->GetAccountId(), setId);
+}
+
+TransmogResult TransmogMgr::TransmogSet(Player* player, uint32 accountId,
+                                        uint32 setId)
+{
+    const TransmogSets* sets = GetAllSets(accountId);
+    if (sets->empty()) return TRANSMOG_ERR_INVALID_SET;
+
+    for (TransmogSets::const_iterator set = sets->begin(); set != sets->end(); 
+         ++set)
+    {
+        if ((*set)[TRANSMOG_FIELD_ENTRY] == setId)
         {
-            setInfo = it->second[setNo];
+            return TransmogSet(player, &(*set));
             break;
         }
     }
-    if (setInfo.empty()) return TRANSMOG_ERR_INVALID_SET;
+    return TRANSMOG_ERR_INVALID_SET;
+}
 
-    if (!CanAfford(player, &setInfo))
+TransmogResult TransmogMgr::TransmogSet(Player* player, 
+                                        const std::vector<uint32>* setInfo)
+{
+    if (setInfo->empty()) return TRANSMOG_ERR_INVALID_SET;
+    if ((*setInfo)[TRANSMOG_FIELD_EMPTY]) return TRANSMOG_ERR_EMPTY;
+
+    if (!CanAfford(player, setInfo))
         return TRANSMOG_ERR_UNMET_REQUIREMENTS;
 
     EquipmentSlots equipmentSet[8] = {
         EQUIPMENT_SLOT_HEAD,
         EQUIPMENT_SLOT_SHOULDERS,
         EQUIPMENT_SLOT_CHEST,
-        EQUIPMENT_SLOT_LEGS,
         EQUIPMENT_SLOT_WRISTS,
         EQUIPMENT_SLOT_HANDS,
         EQUIPMENT_SLOT_WAIST,
+        EQUIPMENT_SLOT_LEGS,
         EQUIPMENT_SLOT_FEET
     };
 
@@ -135,11 +156,58 @@ TransmogResult TransmogMgr::TransmogSet(Player* player, RaceClass raceClass,
     for (int slot = 0; slot < 8; slot++)
     {
         int8 field = TransmogFieldForSlot(equipmentSet[slot]);
-        lastResult = TransmogItem(player, setInfo[field], equipmentSet[slot]);
+        lastResult = TransmogItem(player, (*setInfo)[field], equipmentSet[slot]);
         if (lastResult != TRANSMOG_ERR_OK)
             break;
     }
     return lastResult;
+}
+
+bool TransmogMgr::SaveCustomSet(Player* player, uint32 accountId, uint32 setId)
+{
+    EquipmentSlots equipmentSet[8] = {
+        EQUIPMENT_SLOT_HEAD,
+        EQUIPMENT_SLOT_SHOULDERS,
+        EQUIPMENT_SLOT_CHEST,
+        EQUIPMENT_SLOT_WRISTS,
+        EQUIPMENT_SLOT_HANDS,
+        EQUIPMENT_SLOT_WAIST,
+        EQUIPMENT_SLOT_LEGS,
+        EQUIPMENT_SLOT_FEET
+    };
+    uint32 entries[8];
+
+    for (int slot = 0; slot < 8; slot++)
+    {
+        Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, 
+            equipmentSet[slot]);
+        if (!item) return false;
+        entries[slot] = item->GetTemplate()->ItemId;
+    }
+
+    WorldDatabase.PExecute("UPDATE `" TRANSMOG_PREDEFINED_SETS_TABLE "` SET "
+        "empty=0, helm_id=%u, shoulder_id=%u, chest_id=%u, wrist_id=%u, "
+        "hands_id=%u, waist_id=%u, legs_id=%u, boots_id=%u "
+        "WHERE account_id=%u AND id=%u", entries[0], entries[1], entries[2],
+        entries[3], entries[4], entries[5], entries[6], entries[7], accountId,
+        setId);
+    for (TransmogSets::iterator it = _transmogCustomSetStore[accountId].begin();
+         it != _transmogCustomSetStore[accountId].end(); it++)
+    {
+        if ((*it)[TRANSMOG_FIELD_ENTRY] == setId)
+        {
+            (*it)[TRANSMOG_FIELD_EMPTY]     = 0;
+            (*it)[TRANSMOG_FIELD_HEAD]      = entries[0];
+            (*it)[TRANSMOG_FIELD_SHOULDERS] = entries[1];
+            (*it)[TRANSMOG_FIELD_CHEST]     = entries[2];
+            (*it)[TRANSMOG_FIELD_WRISTS]    = entries[3];
+            (*it)[TRANSMOG_FIELD_HANDS]     = entries[4];
+            (*it)[TRANSMOG_FIELD_WAIST]     = entries[5];
+            (*it)[TRANSMOG_FIELD_LEGS]      = entries[6];
+            (*it)[TRANSMOG_FIELD_FEET]      = entries[7];
+        }
+    }
+    return true;
 }
 
 uint32 TransmogMgr::GetTransmogrifiedItemEntry(uint32 itemGuid)
@@ -166,32 +234,65 @@ void TransmogMgr::SetTransmogrifiedItem(uint32 itemGuid, uint32 newEntry)
     _transmogrifiedItemsStore[itemGuid] = newEntry;
 }
 
+void TransmogMgr::LoadCustomSets(uint32 accountId)
+{
+    _transmogCustomSetStore[accountId].clear();
+    QueryResult result = WorldDatabase.PQuery("SELECT * FROM `" 
+        TRANSMOG_PREDEFINED_SETS_TABLE "` WHERE account_id = '%u' ORDER BY "
+        "`id` DESC", accountId);
+    if (!result) return;
+    do
+    {
+        Field* fields = result->Fetch();
+        std::vector<uint32> setInfo;
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_ENTRY].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_ACCOUNTID].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_EMPTY].GetUInt8());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_CLASS].GetUInt8());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_RACE].GetUInt8());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_RATING].GetUInt16());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_BRACKET].GetUInt16());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_HEAD].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_SHOULDERS].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_CHEST].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_WRISTS].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_HANDS].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_WAIST].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_LEGS].GetUInt32());
+        setInfo.push_back((uint32)fields[TRANSMOG_FIELD_FEET].GetUInt32());
+        _transmogCustomSetStore[accountId].push_back(setInfo);
+    } while (result->NextRow());
+}
+
 void TransmogMgr::LoadPredefinedSets()
 {
     QueryResult result = WorldDatabase.Query("SELECT * FROM `" 
-        TRANSMOG_PREDEFINED_SETS_TABLE "` ORDER BY bracket, rating");
-    uint32 entry = 0;
-    do {
+        TRANSMOG_PREDEFINED_SETS_TABLE "` WHERE account_id IS NULL "
+        "ORDER BY bracket, rating");
+    if (!result) return;
+    do
+    {
         Field* fields = result->Fetch();
         std::vector<uint32> setInfo;
-        setInfo.push_back(entry);
-        setInfo.push_back((uint32)fields[0].GetUInt8());
-        setInfo.push_back((uint32)fields[1].GetUInt8());
-        setInfo.push_back((uint32)fields[2].GetUInt16());
-        setInfo.push_back((uint32)fields[3].GetUInt16());
-        setInfo.push_back((uint32)fields[4].GetUInt32());
-        setInfo.push_back((uint32)fields[5].GetUInt32());
-        setInfo.push_back((uint32)fields[6].GetUInt32());
-        setInfo.push_back((uint32)fields[7].GetUInt32());
-        setInfo.push_back((uint32)fields[8].GetUInt32());
-        setInfo.push_back((uint32)fields[9].GetUInt32());
-        setInfo.push_back((uint32)fields[10].GetUInt32());
-        setInfo.push_back((uint32)fields[11].GetUInt32());
-        setInfo.push_back((uint32)fields[12].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_ENTRY].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_ACCOUNTID].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_EMPTY].GetUInt8());
+        setInfo.push_back(fields[TRANSMOG_FIELD_CLASS].GetUInt8());
+        setInfo.push_back(fields[TRANSMOG_FIELD_RACE].GetUInt8());
+        setInfo.push_back(fields[TRANSMOG_FIELD_RATING].GetUInt16());
+        setInfo.push_back(fields[TRANSMOG_FIELD_BRACKET].GetUInt16());
+        setInfo.push_back(fields[TRANSMOG_FIELD_HEAD].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_SHOULDERS].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_CHEST].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_WRISTS].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_HANDS].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_WAIST].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_LEGS].GetUInt32());
+        setInfo.push_back(fields[TRANSMOG_FIELD_FEET].GetUInt32());
 
-        RaceClass rc(fields[1].GetInt8(), fields[0].GetUInt8());
+        RaceClass rc(fields[TRANSMOG_FIELD_RACE].GetInt8(), 
+            fields[TRANSMOG_FIELD_CLASS].GetUInt8());
         _transmogSetStore[rc].push_back(setInfo);
-        entry++;
     } while (result->NextRow());
     sLog->outString(">> Loaded %u predefined transmog sets.",
         _transmogSetStore.size());
