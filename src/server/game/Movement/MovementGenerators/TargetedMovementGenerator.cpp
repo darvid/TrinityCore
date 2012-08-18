@@ -53,8 +53,10 @@ void TargetedMovementGeneratorMedium<T,D>::SetTargetLocation(T &owner)
 
         if (dist < 0.5f)
             dist = 0.5f;
-
-        _target->GetContactPoint(&owner, x, y, z, dist);
+        if (owner.IsWithinLOSInMap(owner.getVictim()))
+           _target->GetContactPoint(&owner, x, y, z, dist);
+        else
+           _target->GetPosition(x,y,z);
     }
     else
     {
@@ -72,6 +74,14 @@ void TargetedMovementGeneratorMedium<T,D>::SetTargetLocation(T &owner)
     if (_path->GetPathType() & PATHFIND_NOPATH)
         return;
 
+    /*PointsArray pointPath = _path->GetPath();
+    sLog->outError(LOG_FILTER_GENERAL, "length %i type %u", pointPath.size(), _path->GetPathType());
+    Vector3 start = _path->GetStartPosition();
+    Vector3 end = _path->GetEndPosition();
+    Vector3 actualEnd = _path->GetActualEndPosition();
+    sLog->outDebug(LOG_FILTER_GENERAL, "start      (%.3f, %.3f, %.3f)", start.x, start.y, start.z);
+    sLog->outDebug(LOG_FILTER_GENERAL, "end        (%.3f, %.3f, %.3f)", end.x, end.y, end.z);
+    */
     D::_addUnitStateMove(owner);
     _targetReached = false;
     _recalculateTravel = false;
@@ -211,7 +221,7 @@ bool TargetedMovementGeneratorMedium<T,D>::Update(T &owner, const uint32 & time_
         else
             _targetSearchingTimer = 0;
 
-        if (targetMoved)
+        if (targetMoved || !owner.IsWithinLOSInMap(owner.getVictim()))
             SetTargetLocation(owner);
     }
 
