@@ -2,7 +2,7 @@
 SDName: Profession_NPC
 SDAuthor: Dave
 SD%Complete: 100
-SDComment: 
+SDComment:
 SDCategory: passivewow
 EndScriptData */
 
@@ -13,45 +13,44 @@ class profession_vendor : public CreatureScript
 {
     public:
 
-        profession_vendor()
-            : CreatureScript("profession_vendor")
+        profession_vendor() : CreatureScript("profession_vendor")
         {
         }
 
         bool OnGossipHello(Player* player, Creature* creature)
         {
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Blacksmithing", GOSSIP_SENDER_MAIN, 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Blacksmithing", GOSSIP_SENDER_MAIN,
                 SKILL_BLACKSMITHING);
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Engineering", GOSSIP_SENDER_MAIN, 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Engineering", GOSSIP_SENDER_MAIN,
                 SKILL_ENGINEERING);
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Enchanting", GOSSIP_SENDER_MAIN, 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Enchanting", GOSSIP_SENDER_MAIN,
                 SKILL_ENCHANTING);
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Jewelcrafting", GOSSIP_SENDER_MAIN, 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Jewelcrafting", GOSSIP_SENDER_MAIN,
                 SKILL_JEWELCRAFTING);
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Leatherworking", GOSSIP_SENDER_MAIN, 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Leatherworking", GOSSIP_SENDER_MAIN,
                 SKILL_LEATHERWORKING);
-            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Tailoring", GOSSIP_SENDER_MAIN, 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Tailoring", GOSSIP_SENDER_MAIN,
                 SKILL_TAILORING);
 
             player->PlayerTalkClass->SendGossipMenu(GOSSIP_ICON_TRAINER, creature->GetGUID());
 
             return true;
         }
-		
+
 		bool PlayerAlreadyHasTwoProfessions(const Player *player) const
         {
                 uint32 skill_count = 0;
- 
+
                 if (player->HasSkill(SKILL_MINING))
                         skill_count++;
                 if (player->HasSkill(SKILL_SKINNING))
                         skill_count++;
                 if (player->HasSkill(SKILL_HERBALISM))
                         skill_count++;
- 
+
                 if (skill_count >= 2)
                         return true;
- 
+
                 for (uint32 i = 1; i < sSkillLineStore.GetNumRows(); ++i)
                 {
                         SkillLineEntry const *skill_info = sSkillLineStore.LookupEntry(i);
@@ -67,10 +66,10 @@ class profession_vendor : public CreatureScript
                         if (skill_count >= 2)
                                 return true;
                 }
- 
+
                 return false;
         }
-		
+
 		bool LearnProfession(Player *player, Creature* creature, SkillType skill)
 		{
 			if (PlayerAlreadyHasTwoProfessions(player))
@@ -79,7 +78,7 @@ class profession_vendor : public CreatureScript
 				switch (skill)
 				{
 					case SKILL_BLACKSMITHING:
-						player->learnSpell(65282, false);
+						player->learnSpell(51300, false);
 						creature->MonsterWhisper("To socket your belt or bracers, see an Enchanter.", player->GetGUID());
 						break;
 					case SKILL_ENGINEERING:
@@ -91,11 +90,11 @@ class profession_vendor : public CreatureScript
                         creature->MonsterWhisper("To enchant your rings, see an Enchanter", player->GetGUID());
                         break;
 					case SKILL_JEWELCRAFTING:
-						player->learnSpell(51310, false);
+						player->learnSpell(51311, false);
 						creature->MonsterWhisper("Superior gems may be found in the Gems vendor.", player->GetGUID());
 						break;
 					case SKILL_LEATHERWORKING:
-						player->learnSpell(65284, false);
+						player->learnSpell(51302, false);
 						creature->MonsterWhisper("To enhance your leggings or bracers, see an Enchanter.", player->GetGUID());
 						break;
                     case SKILL_TAILORING:
