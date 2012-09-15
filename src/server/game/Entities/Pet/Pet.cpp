@@ -224,7 +224,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petentry, uint32 petnumber, bool c
             SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
                                                             // this enables popup window (pet abandon, cancel)
             SetMaxPower(POWER_HAPPINESS, GetCreatePowers(POWER_HAPPINESS));
-            SetPower(POWER_HAPPINESS, fields[12].GetUInt32());
+            SetPower(POWER_HAPPINESS, HAPPINESS_LEVEL_SIZE * 2);
             setPowerType(POWER_FOCUS);
             break;
         default:
@@ -513,10 +513,12 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
             SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_NONE);
             RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
 
-             //lose happiness when died and not in BG/Arena
+            /*
+            //lose happiness when died and not in BG/Arena
             MapEntry const* mapEntry = sMapStore.LookupEntry(GetMapId());
             if (!mapEntry || (mapEntry->map_type != MAP_ARENA && mapEntry->map_type != MAP_BATTLEGROUND))
                 ModifyPower(POWER_HAPPINESS, -HAPPINESS_LEVEL_SIZE);
+             */
 
             //SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
         }
@@ -617,7 +619,7 @@ void Pet::Update(uint32 diff)
 
             if (m_happinessTimer <= diff)
             {
-                LoseHappiness();
+                // LoseHappiness();
                 m_happinessTimer = 7500;
             }
             else
@@ -906,6 +908,23 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     }
 
     SetBonusDamage(0);
+
+
+    if (isPet() && m_owner->GetTypeId() == TYPEID_PLAYER 
+        && m_owner->getClass() == CLASS_DEATH_KNIGHT)
+    { 
+        const float hasteMV = ((Player*)m_owner)->GetRatingBonusValue(CR_HASTE_MELEE);
+        const float hasteRV = ((Player*)m_owner)->GetRatingBonusValue(CR_HASTE_RANGED);
+        const float hasteMM = ((Player*)m_owner)->GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_HASTE);
+        const float hasteRM = ((Player*)m_owner)->GetTotalAuraModifier(SPELL_AURA_MOD_RANGED_HASTE);
+        
+        sLog->outString("MV: %d; MR: %d; MM: %d; RM: %d", hasteMV, hasteRV,
+        hasteMM, hasteRM);
+
+        ApplyCastTimePercentMod(hasteMV + hasteMM, true);
+        ApplyCastTimePercentMod(hasteRV + hasteRM, true);
+    }
+    
     switch (petType)
     {
         case SUMMON_PET:
@@ -1036,7 +1055,31 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                         SetCreateMana(28 + 10*petlevel);
                         SetCreateHealth(28 + 30*petlevel);
                     }
-                    SetBonusDamage(int32(m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * 0.5f));
+                    // Impurity
+                    float impurityMod = 1.0f;
+                    if (Player * p_owner = m_owner->ToPlayer())
+                    {
+                        PlayerSpellMap playerSpells = p_owner->GetSpellMap();
+                        for (PlayerSpellMap::const_iterator itr = playerSpells.begin(); itr != playerSpells.end(); ++itr)
+                        {
+                            if (itr->second->state == PLAYERSPELL_REMOVED || itr->second->disabled)
+                                continue;
+                            switch (itr->first)
+                            {
+                                case 49220:
+                                case 49633:
+                                case 49635:
+                                case 49636:
+                                case 49638:
+                                {
+                                    if (const SpellInfo *proto = sSpellMgr->GetSpellInfo(itr->first))
+                                        AddFlatPctN(impurityMod, proto->Effects[0].CalcValue());
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    SetBonusDamage(int32(m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * 0.5f * impurityMod));
                     SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
                     SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
                     break;
