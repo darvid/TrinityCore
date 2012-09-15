@@ -3553,7 +3553,7 @@ void AuraEffect::HandleModStateImmunityMask(AuraApplication const* aurApp, uint8
     {
             if (miscVal & (1<<10))
                 aura_immunity_list.push_back(SPELL_AURA_MOD_STUN);
-            if (miscVal & (1<<1))
+            if (miscVal != 1733 && miscVal & (1<<1))
                 aura_immunity_list.push_back(SPELL_AURA_TRANSFORM);
 
             // These flag can be recognized wrong:
