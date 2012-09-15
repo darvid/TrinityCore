@@ -30,7 +30,7 @@
 PathFinderMovementGenerator::PathFinderMovementGenerator(const Unit* owner) :
     m_polyLength(0), m_type(PATHFIND_BLANK),
     m_useStraightPath(false), m_forceDestination(false), m_pointPathLimit(MAX_POINT_PATH_LENGTH),
-    m_sourceUnit(owner), m_navMesh(NULL), m_navMeshQuery(NULL)
+    m_sourceUnit(owner), m_navMesh(NULL), m_navMeshQuery(NULL), m_shouldCharge(true)
 {
     sLog->outDebug(LOG_FILTER_MAPS, "++ PathFinderMovementGenerator::PathFinderMovementGenerator for %u \n", m_sourceUnit->GetGUIDLow());
 
@@ -386,6 +386,9 @@ void PathFinderMovementGenerator::BuildPolyPath(const Vector3 &startPos, const V
             m_type = PATHFIND_NOPATH;
             return;
         }
+
+        if (endPoint[1] - startPoint[1] > MAX_Z_DIFFERENCE)
+            m_shouldCharge = false;
     }
 
     // by now we know what type of path we can get
@@ -440,8 +443,66 @@ void PathFinderMovementGenerator::BuildPointPath(const float *startPoint, const 
     }
 
     m_pathPoints.resize(pointCount);
+    float totalDist = 0;
     for (uint32 i = 0; i < pointCount; ++i)
+    {
         m_pathPoints[i] = Vector3(pathPoints[i*VERTEX_SIZE+2], pathPoints[i*VERTEX_SIZE], pathPoints[i*VERTEX_SIZE+1]);
+        totalDist += dist3DSqr(getStartPosition(), m_pathPoints[i]);
+        /*
+        if (dist3DSqr(getStartPosition(), m_pathPoints[i]) > MAX_TOTAL_PATH_LENGTH)
+        {
+            setActualEndPosition(getStartPosition());
+            BuildShortcut();
+            m_type = PATHFIND_NOPATH;
+            return;
+        }
+         */
+    }
+
+    if (totalDist > MAX_TOTAL_PATH_LENGTH)
+    {
+        if (m_sourceUnit->GetMapId() == 562)
+        {
+            float startEndDist = dist3DSqr(getStartPosition(), getEndPosition());
+            // sLog->outString("endpoint x: %f, y: %f, z: %f, dist: %f", endPoint[2], endPoint[0], endPoint[1], startEndDist);
+
+            // WORST possible way to fix pathfinding for Blade's Edge Arena and other
+            // maps which would otherwise require offmesh connections to prevent
+            // incorrect paths from being generated.
+
+            // For the love of all that is furry and innocent in the world, DO NOT use
+            // the following hack until you have completely and utterly exhausted all
+            // possible alternatives, which include:
+
+            // * Generating mmaps with custom offmesh connections
+            // * Begging Malaco or the guys from sunwell.pl for their solution, which
+            //   probably involved offmesh connections anyway.
+            // * Figuring out why the tiles with custom offmesh connections generated
+            //   with the mangos extractor have poly errors.
+            if (startEndDist < 2000.0f && endPoint[2] <= 6233.803223f)      // southeast pillar
+            {
+                clear();
+                m_pathPoints.resize(4);
+                m_pathPoints[0] = getStartPosition();
+                m_pathPoints[1] = Vector3(6234.210449f, 256.270325f, 10.881308f);
+                m_pathPoints[2] = Vector3(6231.031738f, 252.578079f, 11.178062f);
+                m_pathPoints[3] = getEndPosition();
+            }
+            else if (startEndDist < 2000.0f && endPoint[2] >= 6246.201660f) // northwest pillar
+            {
+                clear();
+                m_pathPoints.resize(4);
+                m_pathPoints[0] = getStartPosition();
+                m_pathPoints[1] = Vector3(6243.187500f, 267.516754f, 10.913185f);
+                m_pathPoints[2] = Vector3(6246.213867f, 271.452026f, 11.224197f);
+                m_pathPoints[3] = getEndPosition();
+            }
+            else
+                m_shouldCharge = false;
+        }
+        else
+            m_shouldCharge = false;
+    }
 
     // first point is always our current location - we need the next one
     setActualEndPosition(m_pathPoints[pointCount-1]);
