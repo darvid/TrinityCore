@@ -113,7 +113,7 @@ bool BattlegroundSA::ResetObjs()
             return false;
     }
 
-    for (uint8 i = BG_SA_SIGIL_1; i <= BG_SA_LEFT_FLAGPOLE; i++)
+    for (uint8 i = BG_SA_SIGIL_1; i <= BG_SA_SIGIL_5; i++)
     {
         if (!AddObject(i, BG_SA_ObjEntries[i],
             BG_SA_ObjSpawnlocs[i][0], BG_SA_ObjSpawnlocs[i][1],
