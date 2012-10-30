@@ -27,6 +27,13 @@
 
 namespace MMAP
 {
+    enum MMAP_LOAD_RESULT
+    {
+        MMAP_LOAD_RESULT_ERROR,
+        MMAP_LOAD_RESULT_OK,
+        MMAP_LOAD_RESULT_IGNORED,
+    };
+
     // static class
     // holds all mmap global data
     // access point to MMapManager singleton

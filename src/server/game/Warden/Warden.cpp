@@ -105,7 +105,7 @@ void Warden::Update()
                 // Kick player if client response delays more than set in config
                 if (_clientResponseTimer > maxClientResponseDelay * IN_MILLISECONDS)
                 {
-                    sLog->outWarden("WARDEN: Player %s (guid: %u, account: %u, latency: %u, IP: %s) exceeded Warden module response delay for more than %s - disconnecting client",
+                    sLog->outDebug(LOG_FILTER_WARDEN, "WARDEN: Player %s (guid: %u, account: %u, latency: %u, IP: %s) exceeded Warden module response delay for more than %s - disconnecting client",
                                    _session->GetPlayerName(), _session->GetGuidLow(), _session->GetAccountId(), _session->GetLatency(), _session->GetRemoteAddress().c_str(),
                                    secsToTimeString(maxClientResponseDelay, true).c_str());
                     _session->KickPlayer();
@@ -211,7 +211,7 @@ void WorldSession::HandleWardenDataOpcode(WorldPacket& recvData)
     sLog->outDebug(LOG_FILTER_WARDEN, "Got packet, opcode %02X, size %u", opcode, uint32(recvData.size()));
     recvData.hexlike();
 
-    switch(opcode)
+    switch (opcode)
     {
         case WARDEN_CMSG_MODULE_MISSING:
             _warden->SendModuleToClient();

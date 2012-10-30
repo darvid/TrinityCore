@@ -26,7 +26,7 @@ template<class T>
 class ConfusedMovementGenerator : public MovementGeneratorMedium< T, ConfusedMovementGenerator<T> >
 {
     public:
-        explicit ConfusedMovementGenerator() : i_nextMoveTime(0) {}
+        explicit ConfusedMovementGenerator() : _nextMoveTime(0) {}
 
         void Initialize(T &);
         void Finalize(T &);
@@ -35,8 +35,8 @@ class ConfusedMovementGenerator : public MovementGeneratorMedium< T, ConfusedMov
 
         MovementGeneratorType GetMovementGeneratorType() { return CONFUSED_MOTION_TYPE; }
     private:
-        TimeTracker i_nextMoveTime;
-        float i_x, i_y, i_z;
+        TimeTracker _nextMoveTime;
+        float _x, _y, _z;
 };
 #endif
 

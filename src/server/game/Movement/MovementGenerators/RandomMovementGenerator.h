@@ -25,7 +25,7 @@ template<class T>
 class RandomMovementGenerator : public MovementGeneratorMedium< T, RandomMovementGenerator<T> >
 {
     public:
-        RandomMovementGenerator(float spawn_dist = 0.0f) : i_nextMoveTime(0), wander_distance(spawn_dist) {}
+        RandomMovementGenerator(float spawn_dist = 0.0f) : _nextMoveTime(0), _wanderDistance(spawn_dist) {}
 
         void _setRandomLocation(T &);
         void Initialize(T &);
@@ -34,11 +34,12 @@ class RandomMovementGenerator : public MovementGeneratorMedium< T, RandomMovemen
         bool Update(T &, const uint32);
         bool GetResetPosition(T&, float& x, float& y, float& z);
         MovementGeneratorType GetMovementGeneratorType() { return RANDOM_MOTION_TYPE; }
-    private:
-        TimeTrackerSmall i_nextMoveTime;
 
-        uint32 i_nextMove;
-        float wander_distance;
+    private:
+        TimeTrackerSmall _nextMoveTime;
+
+        uint32 _nextMove;
+        float _wanderDistance;
 };
 #endif
 

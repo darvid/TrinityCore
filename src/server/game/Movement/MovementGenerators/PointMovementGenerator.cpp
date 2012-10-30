@@ -33,11 +33,11 @@ void PointMovementGenerator<T>::Initialize(T &unit)
         unit.StopMoving();
 
     unit.AddUnitState(UNIT_STATE_ROAMING | UNIT_STATE_ROAMING_MOVE);
-    i_recalculateSpeed = false;
+    _recalculateSpeed = false;
     Movement::MoveSplineInit init(unit);
-    init.MoveTo(i_x, i_y, i_z, m_generatePath);
-    if (speed > 0.0f)
-        init.SetVelocity(speed);
+    init.MoveTo(_x, _y, _z, _generatePath);
+    if (_speed > 0.0f)
+        init.SetVelocity(_speed);
     init.Launch();
 }
 
@@ -55,13 +55,13 @@ bool PointMovementGenerator<T>::Update(T &unit, const uint32 & /*diff*/)
 
     unit.AddUnitState(UNIT_STATE_ROAMING_MOVE);
 
-    if (i_recalculateSpeed && !unit.movespline->Finalized())
+    if (_recalculateSpeed && !unit.movespline->Finalized())
     {
-        i_recalculateSpeed = false;
+        _recalculateSpeed = false;
         Movement::MoveSplineInit init(unit);
-        init.MoveTo(i_x, i_y, i_z);
-        if (speed > 0.0f) // Default value for point motion type is 0.0, if 0.0 spline will use GetSpeed on unit
-            init.SetVelocity(speed);
+        init.MoveTo(_x, _y, _z, _generatePath);
+        if (_speed > 0.0f) // Default value for point motion type is 0.0, if 0.0 spline will use GetSpeed on unit
+            init.SetVelocity(_speed);
         init.Launch();
     }
 
@@ -83,7 +83,7 @@ void PointMovementGenerator<T>::Reset(T &unit)
     if (!unit.IsStopped())
         unit.StopMoving();
 
-    unit.AddUnitState(UNIT_STATE_ROAMING|UNIT_STATE_ROAMING_MOVE);
+    unit.AddUnitState(UNIT_STATE_ROAMING | UNIT_STATE_ROAMING_MOVE);
 }
 
 template<class T>
@@ -125,5 +125,5 @@ void EffectMovementGenerator::Finalize(Unit &unit)
         return;
 
     if (((Creature&)unit).AI())
-        ((Creature&)unit).AI()->MovementInform(EFFECT_MOTION_TYPE, m_Id);
+        ((Creature&)unit).AI()->MovementInform(EFFECT_MOTION_TYPE, _Id);
 }

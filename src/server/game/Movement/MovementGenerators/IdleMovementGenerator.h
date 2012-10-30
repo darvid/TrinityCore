@@ -37,7 +37,7 @@ extern IdleMovementGenerator si_idleMovement;
 class RotateMovementGenerator : public MovementGenerator
 {
     public:
-        explicit RotateMovementGenerator(uint32 time, RotateDirection direction) : m_duration(time), m_maxDuration(time), m_direction(direction) {}
+        explicit RotateMovementGenerator(uint32 time, RotateDirection direction) : _duration(time), _maxDuration(time), _direction(direction) {}
 
         void Initialize(Unit& owner);
         void Finalize(Unit& owner);
@@ -46,14 +46,14 @@ class RotateMovementGenerator : public MovementGenerator
         MovementGeneratorType GetMovementGeneratorType() { return ROTATE_MOTION_TYPE; }
 
     private:
-        uint32 m_duration, m_maxDuration;
-        RotateDirection m_direction;
+        uint32 _duration, _maxDuration;
+        RotateDirection _direction;
 };
 
 class DistractMovementGenerator : public MovementGenerator
 {
     public:
-        explicit DistractMovementGenerator(uint32 timer) : m_timer(timer) {}
+        explicit DistractMovementGenerator(uint32 timer) : _timer(timer) {}
 
         void Initialize(Unit& owner);
         void Finalize(Unit& owner);
@@ -62,7 +62,7 @@ class DistractMovementGenerator : public MovementGenerator
         MovementGeneratorType GetMovementGeneratorType() { return DISTRACT_MOTION_TYPE; }
 
     private:
-        uint32 m_timer;
+        uint32 _timer;
 };
 
 class AssistanceDistractMovementGenerator : public DistractMovementGenerator

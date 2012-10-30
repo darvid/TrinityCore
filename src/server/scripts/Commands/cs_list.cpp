@@ -80,7 +80,7 @@ public:
         char* countStr = strtok(NULL, " ");
         uint32 count = countStr ? atol(countStr) : 10;
 
-        if (count < 0)
+        if (count == 0)
             return false;
 
         QueryResult result;
@@ -152,7 +152,7 @@ public:
         char* countStr = strtok(NULL, " ");
         uint32 count = countStr ? atol(countStr) : 10;
 
-        if (count < 0)
+        if (count == 0)
             return false;
 
         PreparedQueryResult result;
@@ -207,7 +207,7 @@ public:
         }
 
         // mail case
-        uint32 mailCount;
+        uint32 mailCount = 0;
 
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAIL_COUNT_ITEM);
         stmt->setUInt32(0, itemId);
@@ -369,7 +369,7 @@ public:
         char* countStr = strtok(NULL, " ");
         uint32 count = countStr ? atol(countStr) : 10;
 
-        if (count < 0)
+        if (count == 0)
             return false;
 
         QueryResult result;

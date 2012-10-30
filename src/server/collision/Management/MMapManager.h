@@ -19,6 +19,8 @@
 #ifndef _MMAP_MANAGER_H
 #define _MMAP_MANAGER_H
 
+#include <ace/RW_Thread_Mutex.h>
+#include <ace/Thread_Mutex.h>
 #include "UnorderedMap.h"
 #include "DetourAlloc.h"
 #include "DetourNavMesh.h"
@@ -78,6 +80,7 @@ namespace MMAP
 
             MMapDataSet loadedMMaps;
             uint32 loadedTiles;
+            ACE_RW_Thread_Mutex i_tileLock;
     };
 }
 

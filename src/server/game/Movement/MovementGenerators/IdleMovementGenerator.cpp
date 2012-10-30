@@ -51,21 +51,21 @@ void RotateMovementGenerator::Initialize(Unit& owner)
 bool RotateMovementGenerator::Update(Unit& owner, const uint32& diff)
 {
     float angle = owner.GetOrientation();
-    if (m_direction == ROTATE_DIRECTION_LEFT)
+    if (_direction == ROTATE_DIRECTION_LEFT)
     {
-        angle += (float)diff * static_cast<float>(M_PI * 2) / m_maxDuration;
+        angle += (float)diff * static_cast<float>(M_PI * 2) / _maxDuration;
         while (angle >= static_cast<float>(M_PI * 2)) angle -= static_cast<float>(M_PI * 2);
     }
     else
     {
-        angle -= (float)diff * static_cast<float>(M_PI * 2) / m_maxDuration;
+        angle -= (float)diff * static_cast<float>(M_PI * 2) / _maxDuration;
         while (angle < 0) angle += static_cast<float>(M_PI * 2);
     }
     owner.SetOrientation(angle);
     owner.SendMovementFlagUpdate(); // this is a hack. we do not have anything correct to send in the beginning
 
-    if (m_duration > diff)
-        m_duration -= diff;
+    if (_duration > diff)
+        _duration -= diff;
     else
         return false;
 
@@ -91,10 +91,10 @@ void DistractMovementGenerator::Finalize(Unit& owner)
 
 bool DistractMovementGenerator::Update(Unit& /*owner*/, const uint32& time_diff)
 {
-    if (time_diff > m_timer)
+    if (time_diff > _timer)
         return false;
 
-    m_timer -= time_diff;
+    _timer -= time_diff;
     return true;
 }
 

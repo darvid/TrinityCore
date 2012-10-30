@@ -33,7 +33,7 @@
 template<class T>
 void ConfusedMovementGenerator<T>::Initialize(T &unit)
 {
-    unit.GetPosition(i_x, i_y, i_z);
+    unit.GetPosition(_x, _y, _z);
     unit.StopMoving();
     unit.SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED);
     unit.AddUnitState(UNIT_STATE_CONFUSED | UNIT_STATE_CONFUSED_MOVE);
@@ -42,7 +42,7 @@ void ConfusedMovementGenerator<T>::Initialize(T &unit)
 template<class T>
 void ConfusedMovementGenerator<T>::Reset(T &unit)
 {
-    i_nextMoveTime.Reset(0);
+    _nextMoveTime.Reset(0);
     unit.AddUnitState(UNIT_STATE_CONFUSED | UNIT_STATE_CONFUSED_MOVE);
     unit.StopMoving();
 }
@@ -53,40 +53,47 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
     if (unit.HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED | UNIT_STATE_DISTRACTED))
         return true;
 
-    if (i_nextMoveTime.Passed())
+    if (_nextMoveTime.Passed())
     {
         // currently moving, update location
         unit.AddUnitState(UNIT_STATE_CONFUSED_MOVE);
 
         if (unit.movespline->Finalized())
-            i_nextMoveTime.Reset(urand(800, 1500));
+            _nextMoveTime.Reset(urand(800, 1500));
     }
     else
     {
         // waiting for next move
-        i_nextMoveTime.Update(diff);
-        if (i_nextMoveTime.Passed())
+        _nextMoveTime.Update(diff);
+        if (_nextMoveTime.Passed())
         {
             // start moving
             unit.AddUnitState(UNIT_STATE_CONFUSED_MOVE);
 
-            float x = i_x + 10.0f*((float)rand_norm() - 0.5f);
-            float y = i_y + 10.0f*((float)rand_norm() - 0.5f);
-            float z = i_z;
+            float x = _x + 10.0f*((float)rand_norm() - 0.5f);
+            float y = _y + 10.0f*((float)rand_norm() - 0.5f);
+            float z = _z + 0.5f;
+
+            Trinity::NormalizeMapCoord(x);
+            Trinity::NormalizeMapCoord(y);
 
             unit.UpdateAllowedPositionZ(x, y, z);
 
+            if (z <= INVALID_HEIGHT)
+                _z = unit.GetBaseMap()->GetHeight(unit.GetPhaseMask(), x, y, MAX_HEIGHT) + 2.0f;
+
             PathFinderMovementGenerator path(&unit);
-            path.setPathLengthLimit(30.0f);
-            path.calculate(x, y, z);
-            if (path.getPathType() & PATHFIND_NOPATH)
+            path.SetPathLengthLimit(30.0f);
+            path.SetUseStrightPath(false);
+
+            if (!unit.IsWithinLOS(x, y, z) || !path.Calculate(x, y, z) || path.GetPathType() & PATHFIND_NOPATH)
             {
-                i_nextMoveTime.Reset(urand(800, 1000));
+                _nextMoveTime.Reset(urand(200, 500));
                 return true;
             }
 
             Movement::MoveSplineInit init(unit);
-            init.MovebyPath(path.getPath());
+            init.MovebyPath(path.GetPath());
             init.SetWalk(true);
             init.Launch();
         }

@@ -30,8 +30,7 @@ template <>
 class HomeMovementGenerator<Creature> : public MovementGeneratorMedium< Creature, HomeMovementGenerator<Creature> >
 {
     public:
-
-        HomeMovementGenerator() : arrived(false) {}
+        HomeMovementGenerator() : _arrived(false) {}
         ~HomeMovementGenerator() {}
 
         void Initialize(Creature &);
@@ -42,7 +41,7 @@ class HomeMovementGenerator<Creature> : public MovementGeneratorMedium< Creature
 
     private:
         void _setTargetLocation(Creature &);
-        bool arrived;
+        bool _arrived;
 };
 #endif
 

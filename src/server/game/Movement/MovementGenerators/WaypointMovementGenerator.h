@@ -74,7 +74,7 @@ class WaypointMovementGenerator<Creature> : public MovementGeneratorMedium< Crea
 
         MovementGeneratorType GetMovementGeneratorType() { return WAYPOINT_MOTION_TYPE; }
 
-        // now path movement implmementation
+        // now path movement implementation
         void LoadPath(Creature &c);
 
         bool GetResetPosition(Creature&, float& x, float& y, float& z);

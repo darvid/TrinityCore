@@ -479,8 +479,9 @@ class Map : public GridRefManager<NGridType>
 
     private:
         void LoadMapAndVMap(int gx, int gy);
-        bool LoadVMapAndMMap(int gx, int gy);
+        void LoadVMap(int gx, int gy);
         void LoadMap(int gx, int gy, bool reload = false);
+        void LoadMMap(int gx, int gy);
         GridMap* GetGrid(float x, float y);
 
         void SetTimer(uint32 t) { i_gridExpiry = t < MIN_GRID_DELAY ? MIN_GRID_DELAY : t; }

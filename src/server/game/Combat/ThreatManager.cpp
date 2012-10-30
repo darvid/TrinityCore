@@ -194,7 +194,6 @@ void HostileReference::updateOnlineStatus()
         }
         else
             accessible = true;
-
     }
     setAccessibleState(accessible);
     setOnlineOfflineState(online);
@@ -293,7 +292,15 @@ HostileReference* ThreatContainer::addThreat(Unit* victim, float threat)
 void ThreatContainer::modifyThreatPercent(Unit* victim, int32 percent)
 {
     if (HostileReference* ref = getReferenceByTarget(victim))
-        ref->addThreatPercent(percent);
+    {
+        if (percent < -100)
+        {
+            ref->removeReference();
+            delete ref;
+        }
+        else
+            ref->addThreatPercent(percent);
+    }
 }
 
 //============================================================
