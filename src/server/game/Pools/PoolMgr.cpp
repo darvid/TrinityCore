@@ -17,6 +17,7 @@
  */
 
 #include "PoolMgr.h"
+#include "Containers.h"
 #include "ObjectMgr.h"
 #include "Log.h"
 #include "MapManager.h"
@@ -571,7 +572,7 @@ void PoolMgr::LoadFromDB()
         if (!result)
         {
             mPoolTemplate.clear();
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded 0 object pools. DB table `pool_template` is empty.");
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 object pools. DB table `pool_template` is empty.");
             return;
         }
 
@@ -589,12 +590,12 @@ void PoolMgr::LoadFromDB()
         }
         while (result->NextRow());
 
-        sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded %u objects pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u objects pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
     }
 
     // Creatures
 
-    sLog->outInfo(LOG_FILTER_POOLSYS, "Loading Creatures Pooling Data...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading Creatures Pooling Data...");
     {
         uint32 oldMSTime = getMSTime();
 
@@ -603,7 +604,7 @@ void PoolMgr::LoadFromDB()
 
         if (!result)
         {
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded 0 creatures in  pools. DB table `pool_creature` is empty.");
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 creatures in  pools. DB table `pool_creature` is empty.");
         }
         else
         {
@@ -644,13 +645,13 @@ void PoolMgr::LoadFromDB()
             }
             while (result->NextRow());
 
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded %u creatures in pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u creatures in pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
         }
     }
 
     // Gameobjects
 
-    sLog->outInfo(LOG_FILTER_POOLSYS, "Loading Gameobject Pooling Data...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading Gameobject Pooling Data...");
     {
         uint32 oldMSTime = getMSTime();
 
@@ -659,7 +660,7 @@ void PoolMgr::LoadFromDB()
 
         if (!result)
         {
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded 0 gameobjects in  pools. DB table `pool_gameobject` is empty.");
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 gameobjects in  pools. DB table `pool_gameobject` is empty.");
         }
         else
         {
@@ -712,13 +713,13 @@ void PoolMgr::LoadFromDB()
             }
             while (result->NextRow());
 
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded %u gameobject in pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u gameobject in pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
         }
     }
 
     // Pool of pools
 
-    sLog->outInfo(LOG_FILTER_POOLSYS, "Loading Mother Pooling Data...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading Mother Pooling Data...");
     {
         uint32 oldMSTime = getMSTime();
 
@@ -727,7 +728,7 @@ void PoolMgr::LoadFromDB()
 
         if (!result)
         {
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded 0 pools in pools");
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 pools in pools");
         }
         else
         {
@@ -796,11 +797,11 @@ void PoolMgr::LoadFromDB()
                 }
             }
 
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded %u pools in mother pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u pools in mother pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
         }
     }
 
-    sLog->outInfo(LOG_FILTER_POOLSYS, "Loading Quest Pooling Data...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading Quest Pooling Data...");
     {
         uint32 oldMSTime = getMSTime();
 
@@ -809,7 +810,7 @@ void PoolMgr::LoadFromDB()
 
         if (!result)
         {
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded 0 quests in pools");
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 quests in pools");
         }
         else
         {
@@ -884,12 +885,12 @@ void PoolMgr::LoadFromDB()
             }
             while (result->NextRow());
 
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Loaded %u quests in pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u quests in pools in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
         }
     }
 
     // The initialize method will spawn all pools not in an event and not in another pool, this is why there is 2 left joins with 2 null checks
-    sLog->outInfo(LOG_FILTER_POOLSYS, "Starting objects pooling system...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Starting objects pooling system...");
     {
         uint32 oldMSTime = getMSTime();
 
@@ -899,7 +900,7 @@ void PoolMgr::LoadFromDB()
 
         if (!result)
         {
-            sLog->outInfo(LOG_FILTER_POOLSYS, ">> Pool handling system initialized, 0 pools spawned.");
+            sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Pool handling system initialized, 0 pools spawned.");
         }
         else
         {

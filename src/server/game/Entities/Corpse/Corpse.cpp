@@ -26,8 +26,7 @@
 #include "GossipDef.h"
 #include "World.h"
 
-Corpse::Corpse(CorpseType type) : WorldObject(type != CORPSE_BONES)
-, m_type(type)
+Corpse::Corpse(CorpseType type) : WorldObject(type != CORPSE_BONES), m_type(type)
 {
     m_objectType |= TYPEMASK_CORPSE;
     m_objectTypeId = TYPEID_CORPSE;
@@ -39,6 +38,7 @@ Corpse::Corpse(CorpseType type) : WorldObject(type != CORPSE_BONES)
     m_time = time(NULL);
 
     lootForBody = false;
+    lootRecipient = NULL;
 }
 
 Corpse::~Corpse()
@@ -79,7 +79,7 @@ bool Corpse::Create(uint32 guidlow, Player* owner)
     if (!IsPositionValid())
     {
         sLog->outError(LOG_FILTER_PLAYER, "Corpse (guidlow %d, owner %s) not created. Suggested coordinates isn't valid (X: %f Y: %f)",
-            guidlow, owner->GetName(), owner->GetPositionX(), owner->GetPositionY());
+            guidlow, owner->GetName().c_str(), owner->GetPositionX(), owner->GetPositionY());
         return false;
     }
 

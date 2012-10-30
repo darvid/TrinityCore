@@ -427,7 +427,7 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, Field* fields, uint32 entr
         need_save = true;
     }
 
-    Tokens tokens(fields[4].GetString(), ' ', MAX_ITEM_PROTO_SPELLS);
+    Tokenizer tokens(fields[4].GetString(), ' ', MAX_ITEM_PROTO_SPELLS);
     if (tokens.size() == MAX_ITEM_PROTO_SPELLS)
         for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
             SetSpellCharges(i, atoi(tokens[i]));
@@ -1027,7 +1027,7 @@ Item* Item::CreateItem(uint32 item, uint32 count, Player const* player)
         if (count > pProto->GetMaxStackSize())
             count = pProto->GetMaxStackSize();
 
-        ASSERT(count !=0 && "pProto->Stackable == 0 but checked at loading already");
+        ASSERT(count != 0 && "pProto->Stackable == 0 but checked at loading already");
 
         Item* pItem = NewItemOrBag(pProto);
         if (pItem->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_ITEM), item, player))

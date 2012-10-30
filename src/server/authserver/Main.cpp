@@ -15,7 +15,13 @@
  * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
+/**
+* @file main.cpp
+* @brief Authentication Server main program
+*
+* This file contains the main program for the
+* authentication server
+*/
 #include <ace/Dev_Poll_Reactor.h>
 #include <ace/TP_Reactor.h>
 #include <ace/ACE.h>
@@ -44,7 +50,7 @@ bool stopEvent = false;                                     // Setting it to tru
 
 LoginDatabaseWorkerPool LoginDatabase;                      // Accessor to the auth server database
 
-// Handle authserver's termination signals
+/// Handle authserver's termination signals
 class AuthServerSignalHandler : public Trinity::SignalHandler
 {
 public:
@@ -68,7 +74,7 @@ void usage(const char *prog)
         prog);
 }
 
-// Launch the auth server
+/// Launch the auth server
 extern int main(int argc, char **argv)
 {
     // Command line parsing to get the configuration file name
@@ -80,7 +86,7 @@ extern int main(int argc, char **argv)
         {
             if (++c >= argc)
             {
-                sLog->outError(LOG_FILTER_AUTHSERVER, "Runtime-Error: -c option requires an input argument");
+                printf("Runtime-Error: -c option requires an input argument\n");
                 usage(argv[0]);
                 return 1;
             }
@@ -92,8 +98,8 @@ extern int main(int argc, char **argv)
 
     if (!ConfigMgr::Load(cfg_file))
     {
-        sLog->outError(LOG_FILTER_AUTHSERVER, "Invalid or missing configuration file : %s", cfg_file);
-        sLog->outError(LOG_FILTER_AUTHSERVER, "Verify that the file exists and has \'[authserver]\' written in the top of the file!");
+        printf("Invalid or missing configuration file : %s\n", cfg_file);
+        printf("Verify that the file exists and has \'[authserver]\' written in the top of the file!\n");
         return 1;
     }
 
@@ -141,10 +147,16 @@ extern int main(int argc, char **argv)
     // Launch the listening network socket
     RealmAcceptor acceptor;
 
-    uint16 rmport = ConfigMgr::GetIntDefault("RealmServerPort", 3724);
+    int32 rmport = ConfigMgr::GetIntDefault("RealmServerPort", 3724);
+    if (rmport < 0 || rmport > 0xFFFF)
+    {
+        sLog->outError(LOG_FILTER_AUTHSERVER, "Specified port out of allowed range (1-65535)");
+        return 1;
+    }
+
     std::string bind_ip = ConfigMgr::GetStringDefault("BindIP", "0.0.0.0");
 
-    ACE_INET_Addr bind_addr(rmport, bind_ip.c_str());
+    ACE_INET_Addr bind_addr(uint16(rmport), bind_ip.c_str());
 
     if (acceptor.open(bind_addr, ACE_Reactor::instance(), ACE_NONBLOCK) == -1)
     {
@@ -226,7 +238,7 @@ extern int main(int argc, char **argv)
     return 0;
 }
 
-// Initialize connection to the database
+/// Initialize connection to the database
 bool StartDB()
 {
     MySQL::Library_Init();
@@ -238,14 +250,14 @@ bool StartDB()
         return false;
     }
 
-    uint8 worker_threads = ConfigMgr::GetIntDefault("LoginDatabase.WorkerThreads", 1);
+    int32 worker_threads = ConfigMgr::GetIntDefault("LoginDatabase.WorkerThreads", 1);
     if (worker_threads < 1 || worker_threads > 32)
     {
         sLog->outError(LOG_FILTER_AUTHSERVER, "Improper value specified for LoginDatabase.WorkerThreads, defaulting to 1.");
         worker_threads = 1;
     }
 
-    uint8 synch_threads = ConfigMgr::GetIntDefault("LoginDatabase.SynchThreads", 1);
+    int32 synch_threads = ConfigMgr::GetIntDefault("LoginDatabase.SynchThreads", 1);
     if (synch_threads < 1 || synch_threads > 32)
     {
         sLog->outError(LOG_FILTER_AUTHSERVER, "Improper value specified for LoginDatabase.SynchThreads, defaulting to 1.");
@@ -253,7 +265,7 @@ bool StartDB()
     }
 
     // NOTE: While authserver is singlethreaded you should keep synch_threads == 1. Increasing it is just silly since only 1 will be used ever.
-    if (!LoginDatabase.Open(dbstring.c_str(), worker_threads, synch_threads))
+    if (!LoginDatabase.Open(dbstring.c_str(), uint8(worker_threads), uint8(synch_threads)))
     {
         sLog->outError(LOG_FILTER_AUTHSERVER, "Cannot connect to database");
         return false;
@@ -264,6 +276,7 @@ bool StartDB()
     return true;
 }
 
+/// Close the connection to the database
 void StopDB()
 {
     LoginDatabase.Close();

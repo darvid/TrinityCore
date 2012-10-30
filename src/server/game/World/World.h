@@ -55,14 +55,14 @@ enum ServerMessageType
 enum ShutdownMask
 {
     SHUTDOWN_MASK_RESTART = 1,
-    SHUTDOWN_MASK_IDLE    = 2,
+    SHUTDOWN_MASK_IDLE    = 2
 };
 
 enum ShutdownExitCode
 {
     SHUTDOWN_EXIT_CODE = 0,
     ERROR_EXIT_CODE    = 1,
-    RESTART_EXIT_CODE  = 2,
+    RESTART_EXIT_CODE  = 2
 };
 
 /// Timers for different object refresh rates
@@ -91,6 +91,7 @@ enum WorldBoolConfigs
     CONFIG_GRID_UNLOAD,
     CONFIG_STATS_SAVE_ONLY_ON_LOGOUT,
     CONFIG_ALLOW_TWO_SIDE_ACCOUNTS,
+    CONFIG_ALLOW_TWO_SIDE_INTERACTION_CALENDAR,
     CONFIG_ALLOW_TWO_SIDE_INTERACTION_CHAT,
     CONFIG_ALLOW_TWO_SIDE_INTERACTION_CHANNEL,
     CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP,
@@ -154,7 +155,6 @@ enum WorldBoolConfigs
     CONFIG_CHATLOG_PUBLIC,
     CONFIG_CHATLOG_ADDON,
     CONFIG_CHATLOG_BGROUND,
-    CONFIG_DUNGEON_FINDER_ENABLE,
     CONFIG_AUTOBROADCAST,
     CONFIG_ALLOW_TICKETS,
     CONFIG_DBC_ENFORCE_ITEM_ATTRIBUTES,
@@ -165,6 +165,7 @@ enum WorldBoolConfigs
     CONFIG_QUEST_IGNORE_AUTO_COMPLETE,
     CONFIG_WARDEN_ENABLED,
     CONFIG_ENABLE_MMAPS,
+    CONFIG_WINTERGRASP_ENABLE,
     BOOL_CONFIG_VALUE_COUNT
 };
 
@@ -312,6 +313,7 @@ enum WorldIntConfigs
     CONFIG_DB_PING_INTERVAL,
     CONFIG_PRESERVE_CUSTOM_CHANNEL_DURATION,
     CONFIG_PERSISTENT_CHARACTER_CLEAN_FLAGS,
+    CONFIG_LFG_OPTIONSMASK,
     CONFIG_MAX_INSTANCES_PER_HOUR,
     CONFIG_WARDEN_CLIENT_RESPONSE_DELAY,
     CONFIG_WARDEN_CLIENT_CHECK_HOLDOFF,
@@ -319,6 +321,12 @@ enum WorldIntConfigs
     CONFIG_WARDEN_CLIENT_BAN_DURATION,
     CONFIG_WARDEN_NUM_MEM_CHECKS,
     CONFIG_WARDEN_NUM_OTHER_CHECKS,
+    CONFIG_WINTERGRASP_PLR_MAX,
+    CONFIG_WINTERGRASP_PLR_MIN,
+    CONFIG_WINTERGRASP_PLR_MIN_LVL,
+    CONFIG_WINTERGRASP_BATTLETIME,
+    CONFIG_WINTERGRASP_NOBATTLETIME,
+    CONFIG_WINTERGRASP_RESTART_AFTER_CRASH,
     INT_CONFIG_VALUE_COUNT
 };
 
@@ -402,18 +410,18 @@ enum BillingPlanFlags
     SESSION_USAGE           = 0x10,
     SESSION_TIME_MIXTURE    = 0x20,
     SESSION_RESTRICTED      = 0x40,
-    SESSION_ENABLE_CAIS     = 0x80,
+    SESSION_ENABLE_CAIS     = 0x80
 };
 
 /// Type of server, this is values from second column of Cfg_Configs.dbc
 enum RealmType
 {
-    REALM_TYPE_NORMAL = 0,
-    REALM_TYPE_PVP = 1,
-    REALM_TYPE_NORMAL2 = 4,
-    REALM_TYPE_RP = 6,
-    REALM_TYPE_RPPVP = 8,
-    REALM_TYPE_FFA_PVP = 16                                 // custom, free for all pvp mode like arena PvP in all zones except rest activated places and sanctuaries
+    REALM_TYPE_NORMAL       = 0,
+    REALM_TYPE_PVP          = 1,
+    REALM_TYPE_NORMAL2      = 4,
+    REALM_TYPE_RP           = 6,
+    REALM_TYPE_RPPVP        = 8,
+    REALM_TYPE_FFA_PVP      = 16                            // custom, free for all pvp mode like arena PvP in all zones except rest activated places and sanctuaries
                                                             // replaced by REALM_PVP in realm list
 };
 
@@ -531,6 +539,7 @@ struct CharacterNameData
     uint8 m_class;
     uint8 m_race;
     uint8 m_gender;
+    uint8 m_level;
 };
 
 /// The World
@@ -597,19 +606,19 @@ class World
         void SetAllowMovement(bool allow) { m_allowMovement = allow; }
 
         /// Set a new Message of the Day
-        void SetMotd(const std::string& motd);
+        void SetMotd(std::string const& motd);
         /// Get the current Message of the Day
         const char* GetMotd() const;
 
         /// Set the string for new characters (first login)
-        void SetNewCharString(std::string str) { m_newCharString = str; }
+        void SetNewCharString(std::string const& str) { m_newCharString = str; }
         /// Get the string for new characters (first login)
-        const std::string& GetNewCharString() const { return m_newCharString; }
+        std::string const& GetNewCharString() const { return m_newCharString; }
 
         LocaleConstant GetDefaultDbcLocale() const { return m_defaultDbcLocale; }
 
         /// Get the path where data (dbc, maps) are stored on disk
-        std::string GetDataPath() const { return m_dataPath; }
+        std::string const& GetDataPath() const { return m_dataPath; }
 
         /// When server started?
         time_t const& GetStartTime() const { return m_startTime; }
@@ -712,10 +721,10 @@ class World
 
         void KickAll();
         void KickAllLess(AccountTypes sec);
-        BanReturn BanAccount(BanMode mode, std::string nameOrIP, std::string duration, std::string reason, std::string author);
-        bool RemoveBanAccount(BanMode mode, std::string nameOrIP);
-        BanReturn BanCharacter(std::string name, std::string duration, std::string reason, std::string author);
-        bool RemoveBanCharacter(std::string name);
+        BanReturn BanAccount(BanMode mode, std::string const& nameOrIP, std::string const& duration, std::string const& reason, std::string const& author);
+        bool RemoveBanAccount(BanMode mode, std::string const& nameOrIP);
+        BanReturn BanCharacter(std::string const& name, std::string const& duration, std::string const& reason, std::string const& author);
+        bool RemoveBanCharacter(std::string const& name);
 
         // for max speed access
         static float GetMaxVisibleDistanceOnContinents()    { return m_MaxVisibleDistanceOnContinents; }
@@ -752,8 +761,9 @@ class World
         bool isEventKillStart;
 
         CharacterNameData const* GetCharacterNameData(uint32 guid) const;
-        void AddCharacterNameData(uint32 guid, std::string const& name, uint8 gender, uint8 race, uint8 playerClass);
+        void AddCharacterNameData(uint32 guid, std::string const& name, uint8 gender, uint8 race, uint8 playerClass, uint8 level);
         void UpdateCharacterNameData(uint32 guid, std::string const& name, uint8 gender = GENDER_NONE, uint8 race = RACE_NONE);
+        void UpdateCharacterNameDataLevel(uint32 guid, uint8 level);
         void DeleteCharaceterNameData(uint32 guid) { _characterNameDataMap.erase(guid); }
 
         uint32 GetCleaningFlags() const { return m_CleaningFlags; }

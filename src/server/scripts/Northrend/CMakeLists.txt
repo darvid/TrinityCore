@@ -10,6 +10,7 @@
 
 set(scripts_STAT_SRCS
   ${scripts_STAT_SRCS}
+  Northrend/wintergrasp.cpp
   Northrend/isle_of_conquest.cpp
   Northrend/storm_peaks.cpp
   Northrend/Ulduar/HallsOfLightning/instance_halls_of_lightning.cpp
@@ -50,6 +51,7 @@ set(scripts_STAT_SRCS
   Northrend/ChamberOfAspects/RubySanctum/boss_baltharus_the_warborn.cpp
   Northrend/ChamberOfAspects/RubySanctum/boss_saviana_ragefire.cpp
   Northrend/ChamberOfAspects/RubySanctum/boss_general_zarithrian.cpp
+  Northrend/ChamberOfAspects/RubySanctum/boss_halion.cpp
   Northrend/FrozenHalls/HallsOfReflection/halls_of_reflection.h
   Northrend/FrozenHalls/HallsOfReflection/boss_falric.cpp
   Northrend/FrozenHalls/HallsOfReflection/instance_halls_of_reflection.cpp

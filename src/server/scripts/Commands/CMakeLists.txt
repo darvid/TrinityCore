@@ -13,8 +13,10 @@ set(scripts_STAT_SRCS
   Commands/cs_account.cpp
   Commands/cs_achievement.cpp
   Commands/cs_ban.cpp
+  Commands/cs_bf.cpp
   Commands/cs_cast.cpp
   Commands/cs_character.cpp
+  Commands/cs_cheat.cpp
   Commands/cs_debug.cpp
   Commands/cs_disable.cpp
   Commands/cs_event.cpp
@@ -25,6 +27,7 @@ set(scripts_STAT_SRCS
   Commands/cs_honor.cpp
   Commands/cs_instance.cpp
   Commands/cs_learn.cpp
+  Commands/cs_lfg.cpp
   Commands/cs_list.cpp
   Commands/cs_lookup.cpp
   Commands/cs_message.cpp

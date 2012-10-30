@@ -179,7 +179,7 @@ void WorldSession::HandleLootMoneyOpcode(WorldPacket & /*recv_data*/)
             for (std::vector<Player*>::const_iterator i = playersNear.begin(); i != playersNear.end(); ++i)
             {
                 (*i)->ModifyMoney(goldPerPlayer);
-                (*i)->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_MONEY, goldPerPlayer);
+                (*i)->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_MONEY, goldPerPlayer);
 
                 WorldPacket data(SMSG_LOOT_MONEY_NOTIFY, 4 + 1);
                 data << uint32(goldPerPlayer);
@@ -190,7 +190,7 @@ void WorldSession::HandleLootMoneyOpcode(WorldPacket & /*recv_data*/)
         else
         {
             player->ModifyMoney(loot->gold);
-            player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_MONEY, loot->gold);
+            player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_MONEY, loot->gold);
 
             WorldPacket data(SMSG_LOOT_MONEY_NOTIFY, 4 + 1);
             data << uint32(loot->gold);
@@ -445,7 +445,7 @@ void WorldSession::HandleLootMasterGiveOpcode(WorldPacket & recv_data)
     if (!target)
         return;
 
-    sLog->outDebug(LOG_FILTER_NETWORKIO, "WorldSession::HandleLootMasterGiveOpcode (CMSG_LOOT_MASTER_GIVE, 0x02A3) Target = [%s].", target->GetName());
+    sLog->outDebug(LOG_FILTER_NETWORKIO, "WorldSession::HandleLootMasterGiveOpcode (CMSG_LOOT_MASTER_GIVE, 0x02A3) Target = [%s].", target->GetName().c_str());
 
     if (_player->GetLootGUID() != lootguid)
         return;
@@ -474,7 +474,8 @@ void WorldSession::HandleLootMasterGiveOpcode(WorldPacket & recv_data)
 
     if (slotid >= loot->items.size() + loot->quest_items.size())
     {
-        sLog->outDebug(LOG_FILTER_LOOT, "MasterLootItem: Player %s might be using a hack! (slot %d, size %lu)", GetPlayer()->GetName(), slotid, (unsigned long)loot->items.size());
+        sLog->outDebug(LOG_FILTER_LOOT, "MasterLootItem: Player %s might be using a hack! (slot %d, size %lu)",
+            GetPlayer()->GetName().c_str(), slotid, (unsigned long)loot->items.size());
         return;
     }
 
@@ -498,9 +499,9 @@ void WorldSession::HandleLootMasterGiveOpcode(WorldPacket & recv_data)
     // not move item from loot to target inventory
     Item* newitem = target->StoreNewItem(dest, item.itemid, true, item.randomPropertyId, looters);
     target->SendNewItem(newitem, uint32(item.count), false, false, true);
-    target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item.itemid, item.count);
-    target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, loot->loot_type, item.count);
-    target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, item.itemid, item.count);
+    target->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item.itemid, item.count);
+    target->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, loot->loot_type, item.count);
+    target->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, item.itemid, item.count);
 
     // mark as looted
     item.count=0;

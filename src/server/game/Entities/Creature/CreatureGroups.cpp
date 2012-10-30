@@ -84,8 +84,7 @@ void FormationMgr::LoadCreatureFormations()
 
     if (!result)
     {
-        sLog->outError(LOG_FILTER_SQL, ">>  Loaded 0 creatures in formations. DB table `creature_formations` is empty!");
-
+        sLog->outError(LOG_FILTER_SERVER_LOADING, ">>  Loaded 0 creatures in formations. DB table `creature_formations` is empty!");
         return;
     }
 
@@ -136,8 +135,7 @@ void FormationMgr::LoadCreatureFormations()
     }
     while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_UNITS, ">> Loaded %u creatures in formations in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u creatures in formations in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void CreatureGroup::AddMember(Creature* member)
@@ -227,8 +225,8 @@ void CreatureGroup::LeaderMoveTo(float x, float y, float z)
         float angle = itr->second->follow_angle;
         float dist = itr->second->follow_dist;
 
-        float dx = x + cos(angle + pathangle) * dist;
-        float dy = y + sin(angle + pathangle) * dist;
+        float dx = x + std::cos(angle + pathangle) * dist;
+        float dy = y + std::sin(angle + pathangle) * dist;
         float dz = z;
 
         Trinity::NormalizeMapCoord(dx);

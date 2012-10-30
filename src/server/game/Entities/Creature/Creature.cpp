@@ -380,6 +380,7 @@ bool Creature::UpdateEntry(uint32 Entry, uint32 team, const CreatureData* data)
     SetAttackTime(RANGED_ATTACK, cInfo->rangeattacktime);
 
     SetUInt32Value(UNIT_FIELD_FLAGS, unit_flags);
+    SetUInt32Value(UNIT_FIELD_FLAGS_2, cInfo->unit_flags2);
 
     SetUInt32Value(UNIT_DYNAMIC_FLAGS, dynamicflags);
 
@@ -629,7 +630,7 @@ void Creature::RegenerateMana()
     AuraEffectList const& ModPowerRegenPCTAuras = GetAuraEffectsByType(SPELL_AURA_MOD_POWER_REGEN_PERCENT);
     for (AuraEffectList::const_iterator i = ModPowerRegenPCTAuras.begin(); i != ModPowerRegenPCTAuras.end(); ++i)
         if ((*i)->GetMiscValue() == POWER_MANA)
-            AddPctN(addvalue, (*i)->GetAmount());
+            AddPct(addvalue, (*i)->GetAmount());
 
     addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) * CREATURE_REGEN_INTERVAL / (5 * IN_MILLISECONDS);
 
@@ -666,7 +667,7 @@ void Creature::RegenerateHealth()
     // Apply modifiers (if any).
     AuraEffectList const& ModPowerRegenPCTAuras = GetAuraEffectsByType(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
     for (AuraEffectList::const_iterator i = ModPowerRegenPCTAuras.begin(); i != ModPowerRegenPCTAuras.end(); ++i)
-        AddPctN(addvalue, (*i)->GetAmount());
+        AddPct(addvalue, (*i)->GetAmount());
 
     addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * CREATURE_REGEN_INTERVAL  / (5 * IN_MILLISECONDS);
 
@@ -1600,7 +1601,8 @@ void Creature::Respawn(bool force)
         if (m_DBTableGuid)
             GetMap()->RemoveCreatureRespawnTime(m_DBTableGuid);
 
-        sLog->outDebug(LOG_FILTER_UNITS, "Respawning creature %s (GuidLow: %u, Full GUID: " UI64FMTD " Entry: %u)", GetName(), GetGUIDLow(), GetGUID(), GetEntry());
+        sLog->outDebug(LOG_FILTER_UNITS, "Respawning creature %s (GuidLow: %u, Full GUID: " UI64FMTD " Entry: %u)",
+            GetName().c_str(), GetGUIDLow(), GetGUID(), GetEntry());
         m_respawnTime = 0;
         lootForPickPocketed = false;
         lootForBody         = false;
@@ -2230,6 +2232,38 @@ bool Creature::HasSpellCooldown(uint32 spell_id) const
     return (itr != m_CreatureSpellCooldowns.end() && itr->second > time(NULL)) || HasCategoryCooldown(spell_id);
 }
 
+void Creature::ProhibitSpellSchool(SpellSchoolMask idSchoolMask, uint32 unTimeMs)
+{
+    time_t curTime = time(NULL);
+    for (uint8 i = 0; i < CREATURE_MAX_SPELLS; ++i)
+    {
+        if (m_spells[i] == 0)
+            continue;
+
+        uint32 unSpellId = m_spells[i];
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(unSpellId);
+        if (!spellInfo)
+        {
+            ASSERT(spellInfo);
+            continue;
+        }
+
+        // Not send cooldown for this spells
+        if (spellInfo->Attributes & SPELL_ATTR0_DISABLED_WHILE_ACTIVE)
+            continue;
+
+        if (spellInfo->PreventionType != SPELL_PREVENTION_TYPE_SILENCE)
+            continue;
+
+        if ((idSchoolMask & spellInfo->GetSchoolMask()) && GetCreatureSpellCooldownDelay(unSpellId) < unTimeMs)
+        {
+            _AddCreatureSpellCooldown(unSpellId, curTime + unTimeMs/IN_MILLISECONDS);
+            if (UnitAI* ai = GetAI())
+                ai->SpellInterrupted(unSpellId, unTimeMs);
+        }
+    }
+}
+
 bool Creature::HasSpell(uint32 spellID) const
 {
     uint8 i;
@@ -2410,7 +2444,7 @@ TrainerSpellData const* Creature::GetTrainerSpells() const
 }
 
 // overwrite WorldObject function for proper name localization
-const char* Creature::GetNameForLocaleIdx(LocaleConstant loc_idx) const
+std::string const & Creature::GetNameForLocaleIdx(LocaleConstant loc_idx) const
 {
     if (loc_idx != DEFAULT_LOCALE)
     {
@@ -2419,7 +2453,7 @@ const char* Creature::GetNameForLocaleIdx(LocaleConstant loc_idx) const
         if (cl)
         {
             if (cl->Name.size() > uloc_idx && !cl->Name[uloc_idx].empty())
-                return cl->Name[uloc_idx].c_str();
+                return cl->Name[uloc_idx];
         }
     }
 
@@ -2447,7 +2481,7 @@ void Creature::SetPosition(float x, float y, float z, float o)
 
     GetMap()->CreatureRelocation(ToCreature(), x, y, z, o);
     if (IsVehicle())
-        GetVehicleKit()->RelocatePassengers(x, y, z, o);
+        GetVehicleKit()->RelocatePassengers();
 }
 
 bool Creature::IsDungeonBoss() const

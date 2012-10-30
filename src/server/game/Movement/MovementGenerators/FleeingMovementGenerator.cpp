@@ -186,9 +186,14 @@ bool FleeingMovementGenerator<T>::_getPoint(T &owner, float &x, float &y, float 
                 angle = _cur_angle + static_cast<float>(M_PI);
                 distance /= 2;
                 break;
+            default:
+                angle = 0.0f;
+                distance = 0.0f;
+                break;
         }
-        temp_x = x + distance * cos(angle);
-        temp_y = y + distance * sin(angle);
+
+        temp_x = x + distance * std::cos(angle);
+        temp_y = y + distance * std::sin(angle);
         Trinity::NormalizeMapCoord(temp_x);
         Trinity::NormalizeMapCoord(temp_y);
         if (owner.IsWithinLOS(temp_x, temp_y, z))
@@ -213,8 +218,8 @@ bool FleeingMovementGenerator<T>::_getPoint(T &owner, float &x, float &y, float 
 
             if (!(new_z - z) || distance / fabs(new_z - z) > 1.0f)
             {
-                float new_z_left = _map->GetHeight(owner.GetPhaseMask(), temp_x + 1.0f*cos(angle+static_cast<float>(M_PI/2)),temp_y + 1.0f*sin(angle+static_cast<float>(M_PI/2)),z,true);
-                float new_z_right = _map->GetHeight(owner.GetPhaseMask(), temp_x + 1.0f*cos(angle-static_cast<float>(M_PI/2)),temp_y + 1.0f*sin(angle-static_cast<float>(M_PI/2)),z,true);
+                float new_z_left = _map->GetHeight(owner.GetPhaseMask(), temp_x + 1.0f* std::cos(angle+static_cast<float>(M_PI/2)),temp_y + 1.0f* std::sin(angle+static_cast<float>(M_PI/2)),z,true);
+                float new_z_right = _map->GetHeight(owner.GetPhaseMask(), temp_x + 1.0f* std::cos(angle-static_cast<float>(M_PI/2)),temp_y + 1.0f* std::sin(angle-static_cast<float>(M_PI/2)),z,true);
                 if (fabs(new_z_left - new_z) < 1.2f && fabs(new_z_right - new_z) < 1.2f)
                 {
                     x = temp_x;
@@ -375,7 +380,7 @@ template<>
 void FleeingMovementGenerator<Player>::Finalize(Player &owner)
 {
     owner.RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
-    owner.ClearUnitState(UNIT_STATE_FLEEING | UNIT_STATE_FLEEING_MOVE);
+    owner.ClearUnitState(UNIT_STATE_FLEEING|UNIT_STATE_FLEEING_MOVE);
     owner.StopMoving();
 }
 
@@ -450,10 +455,6 @@ bool TimedFleeingMovementGenerator::Update(Unit & owner, const uint32& time_diff
         owner.ClearUnitState(UNIT_STATE_FLEEING_MOVE);
         return true;
     }
-
-    _totalFleeTime.Update(time_diff);
-    if (_totalFleeTime.Passed())
-        return false;
 
     _totalFleeTime.Update(time_diff);
     if (_totalFleeTime.Passed())

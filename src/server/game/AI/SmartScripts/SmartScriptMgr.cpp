@@ -50,7 +50,7 @@ void SmartWaypointMgr::LoadFromDB()
 
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_GENERAL, ">> Loaded 0 SmartAI Waypoint Paths. DB table `waypoints` is empty.");
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 SmartAI Waypoint Paths. DB table `waypoints` is empty.");
 
         return;
     }
@@ -88,7 +88,7 @@ void SmartWaypointMgr::LoadFromDB()
     }
     while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_GENERAL, ">> Loaded %u SmartAI waypoint paths (total %u waypoints) in %u ms", count, total, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u SmartAI waypoint paths (total %u waypoints) in %u ms", count, total, GetMSTimeDiffToNow(oldMSTime));
 
 }
 
@@ -117,7 +117,7 @@ void SmartAIMgr::LoadSmartAIFromDB()
 
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_GENERAL, ">> Loaded 0 SmartAI scripts. DB table `smartai_scripts` is empty.");
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 SmartAI scripts. DB table `smartai_scripts` is empty.");
 
         return;
     }
@@ -234,7 +234,7 @@ void SmartAIMgr::LoadSmartAIFromDB()
     }
     while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_GENERAL, ">> Loaded %u SmartAI scripts in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u SmartAI scripts in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 
 }
 
@@ -904,6 +904,8 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
         case SMART_ACTION_SEND_GOSSIP_MENU:
         case SMART_ACTION_GO_SET_LOOT_STATE:
         case SMART_ACTION_SEND_TARGET_TO_TARGET:
+        case SMART_ACTION_SET_HOME_POS:
+        case SMART_ACTION_SET_HEALTH_REGEN:
             break;
         default:
             sLog->outError(LOG_FILTER_SQL, "SmartAIMgr: Not handled action_type(%u), event_type(%u), Entry %d SourceType %u Event %u, skipped.", e.GetActionType(), e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id);
@@ -913,7 +915,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
     return true;
 }
 
-bool SmartAIMgr::IsTextValid(SmartScriptHolder const& e, uint32 id)
+/*bool SmartAIMgr::IsTextValid(SmartScriptHolder const& e, uint32 id) // unused
 {
     bool error = false;
     uint32 entry = 0;
@@ -938,4 +940,4 @@ bool SmartAIMgr::IsTextValid(SmartScriptHolder const& e, uint32 id)
         return false;
     }
     return true;
-}
+}*/

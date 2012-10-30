@@ -20,11 +20,13 @@
 #    SERVER RATES
 #    AUTO BROADCAST
 #    BATTLEGROUND CONFIG
+#    BATTLEFIELD CONFIG
 #    ARENA CONFIG
 #    NETWORK CONFIG
 #    CONSOLE AND REMOTE ACCESS
 #    CHARACTER DELETE OPTIONS
 #    CUSTOM SERVER OPTIONS
+#    LOGGING SYSTEM SETTINGS
 #
 ###################################################################################################
 
@@ -48,7 +50,7 @@
 #
 #    RealmID
 #        Description: ID of the Realm using this config.
-#        Important:   RealmID must match the realmlist inside the realmd database.
+#        Important:   RealmID must match the realmlist inside the auth database.
 #        Default:     1
 
 RealmID = 1
@@ -173,7 +175,7 @@ Compression = 1
 #    PlayerLimit
 #        Description: Maximum number of players in the world. Excluding Mods, GMs and Admins.
 #          Important: If you want to block players and only allow Mods, GMs or Admins to join the
-#                     server, use the DB field "realmd.realmlist.allowedSecurityLevel".
+#                     server, use the DB field "auth.realmlist.allowedSecurityLevel".
 #            Default: 100 - (Enabled)
 #                     1+  - (Enabled)
 #                     0   - (Disabled, No limit)
@@ -406,10 +408,19 @@ PersistentCharacterCleanFlags = 0
 #
 #    PidFile
 #        Description: World daemon PID file
-#        Example:     "./worldd.pid" - (Enabled)
-#        Default:     ""             - (Disabled)
+#        Example:     "./world.pid" - (Enabled)
+#        Default:     ""            - (Disabled)
 
 PidFile = ""
+
+#
+#    PacketLogFile
+#        Description: Binary packet logging file for the world server.
+#                     Filename extension must be .bin to be parsable with WowPacketParser.
+#        Example:     "World.bin" - (Enabled)
+#        Default:     ""          - (Disabled)
+
+PacketLogFile = ""
 
 #
 #    ChatLogs.Channel
@@ -1103,12 +1114,15 @@ Command.LookupMaxResults = 0
 AllowTickets = 1
 
 #
-#     DungeonFinder.Enable
+#     DungeonFinder.OptionsMask
 #        Description: Dungeon and raid finder system.
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
+#        Value is a bitmask consisting of:
+#           LFG_OPTION_ENABLE_DUNGEON_FINDER = 1,     Enable the dungeon finder browser
+#           LFG_OPTION_ENABLE_RAID_BROWSER   = 2,     Enable the raid browser
+#        Default:     1
 
-DungeonFinder.Enable = 1
+DungeonFinder.OptionsMask = 1
+
 
 #
 #   DBC.EnforceItemAttributes
@@ -1205,6 +1219,14 @@ Warden.BanDuration = 86400
 #                     0 - (Disabled)
 
 AllowTwoSide.Accounts = 1
+
+#
+#    AllowTwoSide.Interaction.Calendar
+#        Description: Allow calendar invites between factions.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+
+AllowTwoSide.Interaction.Calendar = 0
 
 #
 #    AllowTwoSide.Interaction.Chat
@@ -2183,6 +2205,62 @@ Battleground.Random.ResetHour = 6
 ###################################################################################################
 
 ###################################################################################################
+# BATTLEFIELD CONFIG
+#
+#     Wintergrasp.Enable
+#         Description: Enable the Wintergrasp battlefield.
+#         Default:     0 - (Disabled)
+#                      1 - (Enabled, Experimental as of still being in development)
+
+Wintergrasp.Enable = 0
+
+#
+#     Wintergrasp.PlayerMax
+#         Description: Maximum number of players allowed in Wintergrasp.
+#         Default:     100
+
+Wintergrasp.PlayerMax = 100
+
+#
+#     Wintergrasp.PlayerMin
+#         Description: Minimum number of players required for Wintergrasp.
+#         Default:     0
+
+Wintergrasp.PlayerMin = 0
+
+#
+#     Wintergrasp.PlayerMinLvl
+#         Description: Required character level for the Wintergrasp battle.
+#         Default:     77
+
+Wintergrasp.PlayerMinLvl = 77
+
+#
+#     Wintergrasp.BattleTimer
+#         Description: Time (in minutes) for the Wintergrasp battle to last.
+#         Default:     30
+
+Wintergrasp.BattleTimer = 30
+
+#
+#     Wintergrasp.NoBattleTimer
+#         Description: Time (in minutes) between Wintergrasp battles.
+#         Default:     150
+
+Wintergrasp.NoBattleTimer = 150
+
+#
+#     Wintergrasp.CrashRestartTimer
+#         Description: Time (in minutes) to delay the restart of Wintergrasp if the world server
+#                      crashed during a running battle.
+#         Default:     10
+
+Wintergrasp.CrashRestartTimer = 10
+
+#
+###################################################################################################
+
+###################################################################################################
 # ARENA CONFIG
 #
 #    Arena.MaxRatingDifference
@@ -2267,6 +2345,15 @@ Arena.ArenaStartPersonalRating = 0
 #        Default:     1500
 
 Arena.ArenaStartMatchmakerRating = 1500
+
+#
+#    ArenaLog.ExtendedInfo
+#        Description: Include extended info to ArenaLogFile for each player after rated arena
+#                     matches (guid, name, team, IP, healing/damage done, killing blows).
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+
+ArenaLog.ExtendedInfo = 0
 
 #
 ###################################################################################################
@@ -2578,7 +2665,7 @@ PlayerDump.DisallowOverwrite = 1
 
 ###################################################################################################
 #
-#  Logging system options.
+#  LOGGING SYSTEM SETTINGS
 #
 #  Appender config values: Given a appender "name"
 #    Appender.name
@@ -2600,7 +2687,7 @@ PlayerDump.DisallowOverwrite = 1
 #                         5 - (Error)
 #                         6 - (Fatal)
 #
-#                     Flags: Default Console = 6, File = 7, DB = 0
+#                     Flags:
 #                         0 - None
 #                         1 - Prefix Timestamp to the text
 #                         2 - Prefix Log Level to the text
@@ -2628,25 +2715,32 @@ PlayerDump.DisallowOverwrite = 1
 #                         Example: "13 11 9 5 3 1"
 #
 #                     File: Name of the file (read as optional1 if Type = File)
-#                         Allows to use one "%u" to create dynamic files
+#                         Allows to use one "%s" to create dynamic files
 #
 #                     Mode: Mode to open the file (read as optional2 if Type = File)
 #                          a - (Append)
 #                          w - (Overwrite)
 #
 
-Appender.Console=1,2,6
-Appender.Server=2,2,7,Server.log,w
-Appender.GM=2,2,7,GM.log
-Appender.SQL=2,2,7,SQL.log
-Appender.DBErrors=2,2,7,DBErrors.log
-Appender.Char=2,2,7,Char.log,w
-Appender.RA=2,2,7,RA.log
-Appender.Arenas=2,2,7,Arena.log
-Appender.SQLDev=2,2,7,SQLDev.log
-Appender.SQLDriver=2,2,7,SQLDriver.log
-Appender.Warden=2,2,7,Warden.log
-Appender.Chat=2,2,7,Chat.log
+Appender.Console=1,3,0
+Appender.Server=2,2,0,Server.log,w
+Appender.GM=2,2,0,GM.log
+Appender.DBErrors=2,2,0,DBErrors.log
+Appender.Char=2,2,0,Char.log,w
+Appender.RA=2,2,0,RA.log
+Appender.Warden=2,4,0,Warden.log
+Appender.Chat=2,2,0,Chat.log
+Appender.CharDump=2,2,0,%s.log
+Appender.Arenas=2,2,0,Arena.log
+Appender.SQLDev=2,2,0,SQLDev.log
+Appender.SQLDriver=2,2,0,SQLDriver.log
+
+#    Appenders
+#        Description: List of Appenders to read from config
+#                     (Using spaces as separator).
+#        Default:     "Console Server GM DBErrors Char RA Warden Chat"
+
+Appenders=Console Server GM DBErrors Char RA Warden Chat
 
 #  Logger config values: Given a logger "name"
 #    Logger.name
@@ -2692,50 +2786,16 @@ Appender.Chat=2,2,7,Chat.log
 #                        31 - Worldserver
 #                        32 - Game Events
 #                        33 - Calendar
-#                        34 - Character (Exclusive to log login, logout, create, rename, delete actions)
+#                        34 - Character (Exclusive to log login, logout, create, rename)
 #                        35 - Arenas
 #                        36 - SQL Driver
 #                        37 - SQL Dev
-
-Logger.Root=0,5,Console Server
-Logger.Units=1,3,Console Server
-Logger.Pets=2,3,Console Server
-Logger.Vehicles=3,3,Console Server
-Logger.TCSR=4,3,Console Server
-Logger.AI=5,3,Console Server
-Logger.MapScripts=6,3,Console Server
-Logger.NetWork=7,3,Console Server
-Logger.Spells=8,3,Console Server
-Logger.Achievements=9,3,Console Server
-Logger.Conditions=10,3,Console Server
-Logger.Pool=11,3,Console Server
-Logger.AuctionHouse=12,3,Console Server
-Logger.Battlegrounds=13,3,Console Server
-Logger.OutdoorPvP=14,3,Console Server
-Logger.ChatSystem=15,3,Console Server
-Logger.LFG=16,3,Console Server
-Logger.Maps=17,3,Console Server
-Logger.Player=18,3,Console Server
-Logger.PlayerLoading=19,3,Console Server
-Logger.PlayerItems=20,3,Console Server
-Logger.PlayerSkills=21,3,Console Server
-Logger.PlayerChat=22,3,Chat
-Logger.Loot=23,3,Console Server
-Logger.Guilds=24,3,Console Server
-Logger.Transports=25,3,Console Server
-Logger.SQL=26,2,Console Server SQL
-Logger.GM=27,3,Console Server GM
-Logger.RA=28,3,RA
-Logger.Warden=29,3,Warden
-Logger.Authserver=30,3,Console Server
-Logger.Worldserver=31,3,Console Server
-Logger.GameEvents=32,3,Console Server
-Logger.Calendar=33,3,Console Server
-Logger.Character=34,3,Char
-Logger.Arenas=35,3,Arenas
-Logger.SQLDriver=36,5,SQLDriver
-Logger.SQLDev=37,3,SQLDev
-
+#                        38 - Player Dump
+#                        39 - Battlefield
+#                        40 - Server Loading
+#                        41 - Opcodes (just id and name sent / received)
+#                        42 - SOAP
+#
 #                     LogLevel
 #                         0 - (Disabled)
 #                         1 - (Trace)
@@ -2748,17 +2808,29 @@ Logger.SQLDev=37,3,SQLDev
 #                     AppenderList: List of appenders linked to logger
 #                     (Using spaces as separator).
 #
-#    Appenders
-#        Description: List of Appenders to read from config
-#                     (Using spaces as separator).
-#        Default:     "Console Server"
 
-Appenders=Console Server
+Logger.Root=0,5,Console Server
+Logger.Chat=22,2,Chat
+Logger.DBErrors=26,5,Console Server DBErrors
+Logger.GM=27,3,Console Server GM
+Logger.RA=28,3,RA
+Logger.Warden=29,4,Warden
+Logger.WorldServer=31,3,Console Server
+Logger.Character=34,3,Char
+Logger.Arenas=35,3,Arenas
+Logger.SQLDriver=36,5,SQLDriver
+Logger.SQLDev=37,3,SQLDev
+Logger.CharDump=38,3,CharDump
+Logger.Load=40,3,Console Server
+Logger.Opcodes=41,6,Console Server
 
 #
 #    Loggers
 #        Description: List of Loggers to read from config
 #                     (Using spaces as separator).
-#        Default:     "root"
+#        Default:     "Root Chat DBErrors GM RA Warden Character Load"
 
-Loggers=Root
+Loggers=Root Chat DBErrors GM RA Warden Character Load WorldServer Opcodes
+
+#
+###################################################################################################

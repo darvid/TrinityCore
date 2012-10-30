@@ -208,7 +208,7 @@ void WorldSession::HandleOpenItemOpcode(WorldPacket& recvPacket)
     {
         pUser->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW, item, NULL);
         sLog->outError(LOG_FILTER_NETWORKIO, "Possible hacking attempt: Player %s [guid: %u] tried to open item [guid: %u, entry: %u] which is not openable!",
-                pUser->GetName(), pUser->GetGUIDLow(), item->GetGUIDLow(), proto->ItemId);
+                pUser->GetName().c_str(), pUser->GetGUIDLow(), item->GetGUIDLow(), proto->ItemId);
         return;
     }
 
@@ -303,9 +303,10 @@ void WorldSession::HandleGameobjectReportUse(WorldPacket& recvPacket)
     if (!go->IsWithinDistInMap(_player, INTERACTION_DISTANCE))
         return;
 
-    go->AI()->GossipHello(_player);
+    if (go->AI()->GossipHello(_player))
+        return;
 
-    _player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_USE_GAMEOBJECT, go->GetEntry());
+    _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_USE_GAMEOBJECT, go->GetEntry());
 }
 
 void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
@@ -452,13 +453,13 @@ void WorldSession::HandlePetCancelAuraOpcode(WorldPacket& recvPacket)
 
     if (!pet)
     {
-        sLog->outError(LOG_FILTER_NETWORKIO, "HandlePetCancelAura: Attempt to cancel an aura for non-existant pet %u by player '%s'", uint32(GUID_LOPART(guid)), GetPlayer()->GetName());
+        sLog->outError(LOG_FILTER_NETWORKIO, "HandlePetCancelAura: Attempt to cancel an aura for non-existant pet %u by player '%s'", uint32(GUID_LOPART(guid)), GetPlayer()->GetName().c_str());
         return;
     }
 
     if (pet != GetPlayer()->GetGuardianPet() && pet != GetPlayer()->GetCharm())
     {
-        sLog->outError(LOG_FILTER_NETWORKIO, "HandlePetCancelAura: Pet %u is not a pet of player '%s'", uint32(GUID_LOPART(guid)), GetPlayer()->GetName());
+        sLog->outError(LOG_FILTER_NETWORKIO, "HandlePetCancelAura: Pet %u is not a pet of player '%s'", uint32(GUID_LOPART(guid)), GetPlayer()->GetName().c_str());
         return;
     }
 
@@ -514,8 +515,8 @@ void WorldSession::HandleTotemDestroyed(WorldPacket& recvPacket)
         return;
 
     Creature* totem = GetPlayer()->GetMap()->GetCreature(_player->m_SummonSlot[slotId]);
-    // Don't unsummon sentry totem
-    if (totem && totem->isTotem() && totem->GetEntry() != SENTRY_TOTEM_ENTRY)
+
+    if (totem && totem->isTotem())
         totem->ToTotem()->UnSummon();
 }
 

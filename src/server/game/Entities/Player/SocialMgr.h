@@ -54,25 +54,11 @@ struct FriendInfo
     uint8 Class;
     std::string Note;
 
-    FriendInfo()
-    {
-        Status = FRIEND_STATUS_OFFLINE;
-        Flags = 0;
-        Area = 0;
-        Level = 0;
-        Class = 0;
-        Note = "";
-    }
+    FriendInfo() : Status(FRIEND_STATUS_OFFLINE), Flags(0), Area(0), Level(0), Class(0), Note()
+    { }
 
-    FriendInfo(uint8 flags, const std::string& note)
-    {
-        Status = FRIEND_STATUS_OFFLINE;
-        Flags = flags;
-        Area = 0;
-        Level = 0;
-        Class = 0;
-        Note = note;
-    }
+    FriendInfo(uint8 flags, std::string const& note) : Status(FRIEND_STATUS_OFFLINE), Flags(flags), Area(0), Level(0), Class(0), Note(note)
+    { }
 };
 
 typedef std::map<uint32, FriendInfo> PlayerSocialMap;
@@ -161,4 +147,3 @@ class SocialMgr
 
 #define sSocialMgr ACE_Singleton<SocialMgr, ACE_Null_Mutex>::instance()
 #endif
-

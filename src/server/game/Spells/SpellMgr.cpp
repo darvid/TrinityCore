@@ -30,6 +30,8 @@
 #include "CreatureAI.h"
 #include "MapManager.h"
 #include "BattlegroundIC.h"
+#include "BattlefieldWG.h"
+#include "BattlefieldMgr.h"
 
 bool IsPrimaryProfessionSkill(uint32 skill)
 {
@@ -72,6 +74,9 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellInfo const* spellproto,
             // Pet charge effects (Infernal Awakening, Demon Charge)
             if (spellproto->SpellVisual[0] == 2816 && spellproto->SpellIconID == 15)
                 return DIMINISHING_CONTROLLED_STUN;
+            // Frost Tomb
+            else if (spellproto->Id == 48400)
+                return DIMINISHING_NONE;
             // Gnaw
             else if (spellproto->Id == 47481)
                 return DIMINISHING_CONTROLLED_STUN;
@@ -640,7 +645,7 @@ SpellSpellGroupMapBounds SpellMgr::GetSpellSpellGroupMapBounds(uint32 spell_id) 
     return SpellSpellGroupMapBounds(mSpellSpellGroup.lower_bound(spell_id), mSpellSpellGroup.upper_bound(spell_id));
 }
 
-uint32 SpellMgr::IsSpellMemberOfSpellGroup(uint32 spellid, SpellGroup groupid) const
+bool SpellMgr::IsSpellMemberOfSpellGroup(uint32 spellid, SpellGroup groupid) const
 {
     SpellSpellGroupMapBounds spellGroup = GetSpellSpellGroupMapBounds(spellid);
     for (SpellSpellGroupMap::const_iterator itr = spellGroup.first; itr != spellGroup.second; ++itr)
@@ -1056,12 +1061,9 @@ SpellAreaMapBounds SpellMgr::GetSpellAreaMapBounds(uint32 spell_id) const
     return SpellAreaMapBounds(mSpellAreaMap.lower_bound(spell_id), mSpellAreaMap.upper_bound(spell_id));
 }
 
-SpellAreaForQuestMapBounds SpellMgr::GetSpellAreaForQuestMapBounds(uint32 quest_id, bool active) const
+SpellAreaForQuestMapBounds SpellMgr::GetSpellAreaForQuestMapBounds(uint32 quest_id) const
 {
-    if (active)
-        return SpellAreaForQuestMapBounds(mSpellAreaForActiveQuestMap.lower_bound(quest_id), mSpellAreaForActiveQuestMap.upper_bound(quest_id));
-    else
-        return SpellAreaForQuestMapBounds(mSpellAreaForQuestMap.lower_bound(quest_id), mSpellAreaForQuestMap.upper_bound(quest_id));
+    return SpellAreaForQuestMapBounds(mSpellAreaForQuestMap.lower_bound(quest_id), mSpellAreaForQuestMap.upper_bound(quest_id));
 }
 
 SpellAreaForQuestMapBounds SpellMgr::GetSpellAreaForQuestEndMapBounds(uint32 quest_id) const
@@ -1094,11 +1096,11 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
             return false;
 
     if (questStart)                              // not in expected required quest state
-        if (!player || ((!questStartCanActive || !player->IsActiveQuest(questStart)) && !player->GetQuestRewardStatus(questStart)))
+        if (!player || (((1 << player->GetQuestStatus(questStart)) & questStartStatus) == 0))
             return false;
 
     if (questEnd)                                // not in expected forbidden quest state
-        if (!player || player->GetQuestRewardStatus(questEnd))
+        if (!player || (((1 << player->GetQuestStatus(questEnd)) & questEndStatus) == 0))
             return false;
 
     if (auraSpell)                               // not have expected aura
@@ -1120,10 +1122,20 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
                 return false;
             break;
         }
+        case 58730: // No fly Zone - Wintergrasp
+        {
+            if (!player)
+                return false;
+
+            Battlefield* Bf = sBattlefieldMgr->GetBattlefieldToZoneId(player->GetZoneId());
+            if (!Bf || Bf->CanFlyIn() || (!player->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) && !player->HasAuraType(SPELL_AURA_FLY)))
+                return false;
+            break;
+        }
         case 68719: // Oil Refinery - Isle of Conquest.
         case 68720: // Quarry - Isle of Conquest.
         {
-            if (player->GetBattlegroundTypeId() != BATTLEGROUND_IC || !player->GetBattleground())
+            if (!player || player->GetBattlegroundTypeId() != BATTLEGROUND_IC || !player->GetBattleground())
                 return false;
 
             uint8 nodeType = spellId == 68719 ? NODE_TYPE_REFINERY : NODE_TYPE_QUARRY;
@@ -1135,6 +1147,46 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
 
             return false;
         }
+        case 56618: // Horde Controls Factory Phase Shift
+        case 56617: // Alliance Controls Factory Phase Shift
+            {
+                if (!player)
+                    return false;
+
+                Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(player->GetZoneId());
+
+                if (!bf || bf->GetTypeId() != BATTLEFIELD_WG)
+                    return false;
+
+                // team that controls the workshop in the specified area
+                uint32 team = bf->GetData(newArea);
+
+                if (team == TEAM_HORDE)
+                    return spellId == 56618;
+                else if (team == TEAM_ALLIANCE)
+                    return spellId == 56617;
+            }
+            break;
+        case 57940: // Essence of Wintergrasp - Northrend
+        case 58045: // Essence of Wintergrasp - Wintergrasp
+        {
+            if (!player)
+                return false;
+
+            if (Battlefield* battlefieldWG = sBattlefieldMgr->GetBattlefieldByBattleId(BATTLEFIELD_BATTLEID_WG))
+                return battlefieldWG->IsEnabled() && (player->GetTeamId() == battlefieldWG->GetDefenderTeam()) && !battlefieldWG->IsWarTime();
+            break;
+        }
+        case 74411: // Battleground - Dampening
+        {
+            if (!player)
+                return false;
+
+            if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(player->GetZoneId()))
+                return bf->IsWarTime();
+            break;
+        }
+
     }
 
     return true;
@@ -1155,7 +1207,7 @@ void SpellMgr::LoadSpellRanks()
 
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell rank records. DB table `spell_ranks` is empty.");
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell rank records. DB table `spell_ranks` is empty.");
 
         return;
     }
@@ -1251,7 +1303,7 @@ void SpellMgr::LoadSpellRanks()
         while (true);
     } while (!finished);
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell rank records in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell rank records in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 
 }
 
@@ -1267,7 +1319,7 @@ void SpellMgr::LoadSpellRequired()
 
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell required records. DB table `spell_required` is empty.");
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell required records. DB table `spell_required` is empty.");
 
         return;
     }
@@ -1312,7 +1364,7 @@ void SpellMgr::LoadSpellRequired()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell required records in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell required records in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 
 }
 
@@ -1350,8 +1402,7 @@ void SpellMgr::LoadSpellLearnSkills()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u Spell Learn Skills from DBC in %u ms", dbc_count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u Spell Learn Skills from DBC in %u ms", dbc_count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellLearnSpells()
@@ -1364,8 +1415,7 @@ void SpellMgr::LoadSpellLearnSpells()
     QueryResult result = WorldDatabase.Query("SELECT entry, SpellID, Active FROM spell_learn_spell");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell learn spells. DB table `spell_learn_spell` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell learn spells. DB table `spell_learn_spell` is empty.");
         return;
     }
 
@@ -1453,8 +1503,7 @@ void SpellMgr::LoadSpellLearnSpells()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell learn spells + %u found in DBC in %u ms", count, dbc_count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell learn spells + %u found in DBC in %u ms", count, dbc_count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellTargetPositions()
@@ -1467,8 +1516,7 @@ void SpellMgr::LoadSpellTargetPositions()
     QueryResult result = WorldDatabase.Query("SELECT id, target_map, target_position_x, target_position_y, target_position_z, target_orientation FROM spell_target_position");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell target coordinates. DB table `spell_target_position` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell target coordinates. DB table `spell_target_position` is empty.");
         return;
     }
 
@@ -1573,8 +1621,7 @@ void SpellMgr::LoadSpellTargetPositions()
         }
     }*/
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell teleport coordinates in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell teleport coordinates in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellGroups()
@@ -1588,8 +1635,7 @@ void SpellMgr::LoadSpellGroups()
     QueryResult result = WorldDatabase.Query("SELECT id, spell_id FROM spell_group");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell group definitions. DB table `spell_group` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell group definitions. DB table `spell_group` is empty.");
         return;
     }
 
@@ -1655,8 +1701,7 @@ void SpellMgr::LoadSpellGroups()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell group definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell group definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellGroupStackRules()
@@ -1669,8 +1714,7 @@ void SpellMgr::LoadSpellGroupStackRules()
     QueryResult result = WorldDatabase.Query("SELECT group_id, stack_rule FROM spell_group_stack_rules");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell group stack rules. DB table `spell_group_stack_rules` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell group stack rules. DB table `spell_group_stack_rules` is empty.");
         return;
     }
 
@@ -1700,8 +1744,7 @@ void SpellMgr::LoadSpellGroupStackRules()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell group stack rules in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell group stack rules in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellProcEvents()
@@ -1714,8 +1757,7 @@ void SpellMgr::LoadSpellProcEvents()
     QueryResult result = WorldDatabase.Query("SELECT entry, SchoolMask, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1, SpellFamilyMask2, procFlags, procEx, ppmRate, CustomChance, Cooldown FROM spell_proc_event");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell proc event conditions. DB table `spell_proc_event` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell proc event conditions. DB table `spell_proc_event` is empty.");
         return;
     }
 
@@ -1762,9 +1804,9 @@ void SpellMgr::LoadSpellProcEvents()
     } while (result->NextRow());
 
     if (customProc)
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u extra and %u custom spell proc event conditions in %u ms",  count, customProc, GetMSTimeDiffToNow(oldMSTime));
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u extra and %u custom spell proc event conditions in %u ms",  count, customProc, GetMSTimeDiffToNow(oldMSTime));
     else
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u extra spell proc event conditions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u extra spell proc event conditions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 
 }
 
@@ -1778,8 +1820,7 @@ void SpellMgr::LoadSpellProcs()
     QueryResult result = WorldDatabase.Query("SELECT spellId, schoolMask, spellFamilyName, spellFamilyMask0, spellFamilyMask1, spellFamilyMask2, typeMask, spellTypeMask, spellPhaseMask, hitMask, attributesMask, ratePerMinute, chance, cooldown, charges FROM spell_proc");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell proc conditions and data. DB table `spell_proc` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell proc conditions and data. DB table `spell_proc` is empty.");
         return;
     }
 
@@ -1905,8 +1946,7 @@ void SpellMgr::LoadSpellProcs()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell proc conditions and data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell proc conditions and data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellBonusess()
@@ -1919,8 +1959,7 @@ void SpellMgr::LoadSpellBonusess()
     QueryResult result = WorldDatabase.Query("SELECT entry, direct_bonus, dot_bonus, ap_bonus, ap_dot_bonus FROM spell_bonus_data");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell bonus data. DB table `spell_bonus_data` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell bonus data. DB table `spell_bonus_data` is empty.");
         return;
     }
 
@@ -1946,8 +1985,7 @@ void SpellMgr::LoadSpellBonusess()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u extra spell bonus data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u extra spell bonus data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellThreats()
@@ -1960,8 +1998,7 @@ void SpellMgr::LoadSpellThreats()
     QueryResult result = WorldDatabase.Query("SELECT entry, flatMod, pctMod, apPctMod FROM spell_threat");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 aggro generating spells. DB table `spell_threat` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 aggro generating spells. DB table `spell_threat` is empty.");
         return;
     }
 
@@ -1987,8 +2024,7 @@ void SpellMgr::LoadSpellThreats()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u SpellThreatEntries in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u SpellThreatEntries in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSkillLineAbilityMap()
@@ -2009,8 +2045,7 @@ void SpellMgr::LoadSkillLineAbilityMap()
         ++count;
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u SkillLineAbility MultiMap Data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u SkillLineAbility MultiMap Data in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellPetAuras()
@@ -2023,8 +2058,7 @@ void SpellMgr::LoadSpellPetAuras()
     QueryResult result = WorldDatabase.Query("SELECT spell, effectId, pet, aura FROM spell_pet_auras");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell pet auras. DB table `spell_pet_auras` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell pet auras. DB table `spell_pet_auras` is empty.");
         return;
     }
 
@@ -2071,8 +2105,7 @@ void SpellMgr::LoadSpellPetAuras()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell pet auras in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell pet auras in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 // Fill custom data about enchancments
@@ -2112,8 +2145,7 @@ void SpellMgr::LoadEnchantCustomAttr()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u custom enchant attributes in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u custom enchant attributes in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellEnchantProcData()
@@ -2126,8 +2158,7 @@ void SpellMgr::LoadSpellEnchantProcData()
     QueryResult result = WorldDatabase.Query("SELECT entry, customChance, PPMChance, procEx FROM spell_enchant_proc_data");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell enchant proc event conditions. DB table `spell_enchant_proc_data` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell enchant proc event conditions. DB table `spell_enchant_proc_data` is empty.");
         return;
     }
 
@@ -2156,8 +2187,7 @@ void SpellMgr::LoadSpellEnchantProcData()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u enchant proc data definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u enchant proc data definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellLinked()
@@ -2170,8 +2200,7 @@ void SpellMgr::LoadSpellLinked()
     QueryResult result = WorldDatabase.Query("SELECT spell_trigger, spell_effect, type FROM spell_linked_spell");
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 linked spells. DB table `spell_linked_spell` is empty.");
-
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 linked spells. DB table `spell_linked_spell` is empty.");
         return;
     }
 
@@ -2209,8 +2238,7 @@ void SpellMgr::LoadSpellLinked()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u linked spells in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u linked spells in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadPetLevelupSpellMap()
@@ -2266,8 +2294,7 @@ void SpellMgr::LoadPetLevelupSpellMap()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u pet levelup and default spells for %u families in %u ms", count, family_count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u pet levelup and default spells for %u families in %u ms", count, family_count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 bool LoadPetDefaultSpells_helper(CreatureTemplate const* cInfo, PetDefaultSpellsEntry& petDefSpells)
@@ -2351,10 +2378,9 @@ void SpellMgr::LoadPetDefaultSpells()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded addition spells for %u pet spell data entries in %u ms", countData, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded addition spells for %u pet spell data entries in %u ms", countData, GetMSTimeDiffToNow(oldMSTime));
 
-
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, "Loading summonable creature templates...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading summonable creature templates...");
     oldMSTime = getMSTime();
 
     // different summon spells
@@ -2395,8 +2421,7 @@ void SpellMgr::LoadPetDefaultSpells()
         }
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u summonable creature templates in %u ms", countCreature, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u summonable creature templates in %u ms", countCreature, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellAreas()
@@ -2405,16 +2430,15 @@ void SpellMgr::LoadSpellAreas()
 
     mSpellAreaMap.clear();                                  // need for reload case
     mSpellAreaForQuestMap.clear();
-    mSpellAreaForActiveQuestMap.clear();
     mSpellAreaForQuestEndMap.clear();
     mSpellAreaForAuraMap.clear();
 
-    //                                                  0     1         2              3               4           5          6        7       8
-    QueryResult result = WorldDatabase.Query("SELECT spell, area, quest_start, quest_start_active, quest_end, aura_spell, racemask, gender, autocast FROM spell_area");
+    //                                                  0     1         2              3               4                 5          6          7       8         9
+    QueryResult result = WorldDatabase.Query("SELECT spell, area, quest_start, quest_start_status, quest_end_status, quest_end, aura_spell, racemask, gender, autocast FROM spell_area");
 
     if (!result)
     {
-        sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded 0 spell area requirements. DB table `spell_area` is empty.");
+        sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded 0 spell area requirements. DB table `spell_area` is empty.");
 
         return;
     }
@@ -2429,12 +2453,13 @@ void SpellMgr::LoadSpellAreas()
         spellArea.spellId             = spell;
         spellArea.areaId              = fields[1].GetUInt32();
         spellArea.questStart          = fields[2].GetUInt32();
-        spellArea.questStartCanActive = fields[3].GetBool();
-        spellArea.questEnd            = fields[4].GetUInt32();
-        spellArea.auraSpell           = fields[5].GetInt32();
-        spellArea.raceMask            = fields[6].GetUInt32();
-        spellArea.gender              = Gender(fields[7].GetUInt8());
-        spellArea.autocast            = fields[8].GetBool();
+        spellArea.questStartStatus    = fields[3].GetUInt32();
+        spellArea.questEndStatus      = fields[4].GetUInt32();
+        spellArea.questEnd            = fields[5].GetUInt32();
+        spellArea.auraSpell           = fields[6].GetInt32();
+        spellArea.raceMask            = fields[7].GetUInt32();
+        spellArea.gender              = Gender(fields[8].GetUInt8());
+        spellArea.autocast            = fields[9].GetBool();
 
         if (SpellInfo const* spellInfo = GetSpellInfo(spell))
         {
@@ -2466,7 +2491,7 @@ void SpellMgr::LoadSpellAreas()
                     continue;
 
                 // duplicate by requirements
-                ok =false;
+                ok = false;
                 break;
             }
 
@@ -2494,12 +2519,6 @@ void SpellMgr::LoadSpellAreas()
             if (!sObjectMgr->GetQuestTemplate(spellArea.questEnd))
             {
                 sLog->outError(LOG_FILTER_SQL, "Spell %u listed in `spell_area` have wrong end quest (%u) requirement", spell, spellArea.questEnd);
-                continue;
-            }
-
-            if (spellArea.questEnd == spellArea.questStart && !spellArea.questStartCanActive)
-            {
-                sLog->outError(LOG_FILTER_SQL, "Spell %u listed in `spell_area` have quest (%u) requirement for start and end in same time", spell, spellArea.questEnd);
                 continue;
             }
         }
@@ -2577,12 +2596,7 @@ void SpellMgr::LoadSpellAreas()
 
         // for search at quest start/reward
         if (spellArea.questStart)
-        {
-            if (spellArea.questStartCanActive)
-                mSpellAreaForActiveQuestMap.insert(SpellAreaForQuestMap::value_type(spellArea.questStart, sa));
-            else
-                mSpellAreaForQuestMap.insert(SpellAreaForQuestMap::value_type(spellArea.questStart, sa));
-        }
+            mSpellAreaForQuestMap.insert(SpellAreaForQuestMap::value_type(spellArea.questStart, sa));
 
         // for search at quest start/reward
         if (spellArea.questEnd)
@@ -2595,8 +2609,7 @@ void SpellMgr::LoadSpellAreas()
         ++count;
     } while (result->NextRow());
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded %u spell area requirements in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell area requirements in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadSpellInfoStore()
@@ -2612,8 +2625,7 @@ void SpellMgr::LoadSpellInfoStore()
             mSpellInfoMap[i] = new SpellInfo(spellEntry);
     }
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded spell custom attributes in %u ms", GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded spell custom attributes in %u ms", GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::UnloadSpellInfoStore()
@@ -2783,6 +2795,10 @@ void SpellMgr::LoadSpellCustomAttr()
 
         switch (spellInfo->Id)
         {
+            case 60256:
+                //Crashes client on pressing ESC (Maybe because of ReqSpellFocus and GameObject)
+                spellInfo->AttributesEx4 &= ~SPELL_ATTR4_TRIGGERED;
+                break;
             case 1776: // Gouge
             case 1777:
             case 8629:
@@ -2959,8 +2975,7 @@ void SpellMgr::LoadSpellCustomAttr()
 
     CreatureAI::FillAISpellInfo();
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loaded spell custom attributes in %u ms", GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded spell custom attributes in %u ms", GetMSTimeDiffToNow(oldMSTime));
 }
 
 void SpellMgr::LoadDbcDataCorrections()
@@ -2994,6 +3009,16 @@ void SpellMgr::LoadDbcDataCorrections()
 
         switch (spellInfo->Id)
         {
+            case 42730:
+                spellInfo->EffectTriggerSpell[EFFECT_1] = 42739;
+                break;
+            case 59735:
+                spellInfo->EffectTriggerSpell[EFFECT_1] = 59736;
+                break;
+            case 52611: // Summon Skeletons
+            case 52612: // Summon Skeletons
+                spellInfo->EffectMiscValueB[0] = 64;
+                break;
             case 40244: // Simon Game Visual
             case 40245: // Simon Game Visual
             case 40246: // Simon Game Visual
@@ -3275,6 +3300,22 @@ void SpellMgr::LoadDbcDataCorrections()
                         // this needs research on modifier applying rules, does not seem to be in Attributes fields
                 spellInfo->EffectSpellClassMask[0] = flag96(0x00000040, 0x00000000, 0x00000000);
                 break;
+            case 64949: // Idol of the Flourishing Life
+                spellInfo->EffectSpellClassMask[EFFECT_0] = flag96(0x00000000, 0x02000000, 0x00000000);
+                spellInfo->EffectApplyAuraName[EFFECT_0] = SPELL_AURA_ADD_FLAT_MODIFIER;
+                break;
+            case 34231: // Libram of the Lightbringer
+            case 60792: // Libram of Tolerance
+            case 64956: // Libram of the Resolute
+                spellInfo->EffectSpellClassMask[EFFECT_0] = flag96(0x80000000, 0x00000000, 0x00000000);
+                spellInfo->EffectApplyAuraName[EFFECT_0] = SPELL_AURA_ADD_FLAT_MODIFIER;
+                break;
+            case 28851: // Libram of Light
+            case 28853: // Libram of Divinity
+            case 32403: // Blessed Book of Nagrand
+                spellInfo->EffectSpellClassMask[EFFECT_0] = flag96(0x40000000, 0x00000000, 0x00000000);
+                spellInfo->EffectApplyAuraName[EFFECT_0] = SPELL_AURA_ADD_FLAT_MODIFIER;
+                break;
             case 45602: // Ride Carpet
                 spellInfo->EffectBasePoints[EFFECT_0] = 0; // force seat 0, vehicle doesn't have the required seat flags for "no seat specified (-1)"
                 break;
@@ -3381,7 +3422,7 @@ void SpellMgr::LoadDbcDataCorrections()
                 break;
             case 69055: // Saber Lash (Lord Marrowgar)
             case 70814: // Saber Lash (Lord Marrowgar)
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_5_YARDS;    // 5yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_5_YARDS; // 5yd
                 break;
             case 69075: // Bone Storm (Lord Marrowgar)
             case 70834: // Bone Storm (Lord Marrowgar)
@@ -3391,7 +3432,7 @@ void SpellMgr::LoadDbcDataCorrections()
             case 71160: // Plague Stench (Stinky)
             case 71161: // Plague Stench (Stinky)
             case 71123: // Decimate (Stinky & Precious)
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_100_YARDS;   // 100yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_100_YARDS; // 100yd
                 break;
             case 72378: // Blood Nova (Deathbringer Saurfang)
             case 73058: // Blood Nova (Deathbringer Saurfang)
@@ -3409,7 +3450,7 @@ void SpellMgr::LoadDbcDataCorrections()
                 spellInfo->Effect[2] = 0;
                 break;
             case 70460: // Coldflame Jets (Traps after Saurfang)
-                spellInfo->DurationIndex = 1;   // 10 seconds
+                spellInfo->DurationIndex = 1; // 10 seconds
                 break;
             case 71412: // Green Ooze Summon (Professor Putricide)
             case 71415: // Orange Ooze Summon (Professor Putricide)
@@ -3417,6 +3458,9 @@ void SpellMgr::LoadDbcDataCorrections()
                 break;
             case 71159: // Awaken Plagued Zombies
                 spellInfo->DurationIndex = 21;
+                break;
+            case 70530: // Volatile Ooze Beam Protection (Professor Putricide)
+                spellInfo->Effect[0] = SPELL_EFFECT_APPLY_AURA; // for an unknown reason this was SPELL_EFFECT_APPLY_AREA_AURA_RAID
                 break;
             // THIS IS HERE BECAUSE COOLDOWN ON CREATURE PROCS IS NOT IMPLEMENTED
             case 71604: // Mutated Strength (Professor Putricide)
@@ -3429,7 +3473,7 @@ void SpellMgr::LoadDbcDataCorrections()
             case 72464: // Mutated Plague (Professor Putricide)
             case 72506: // Mutated Plague (Professor Putricide)
             case 72507: // Mutated Plague (Professor Putricide)
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS; // 50000yd
                 break;
             case 70911: // Unbound Plague (Professor Putricide) (needs target selection script)
             case 72854: // Unbound Plague (Professor Putricide) (needs target selection script)
@@ -3440,7 +3484,7 @@ void SpellMgr::LoadDbcDataCorrections()
             case 71518: // Unholy Infusion Quest Credit (Professor Putricide)
             case 72934: // Blood Infusion Quest Credit (Blood-Queen Lana'thel)
             case 72289: // Frost Infusion Quest Credit (Sindragosa)
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS;   // another missing radius
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS; // another missing radius
                 break;
             case 71708: // Empowered Flare (Blood Prince Council)
             case 72785: // Empowered Flare (Blood Prince Council)
@@ -3461,6 +3505,10 @@ void SpellMgr::LoadDbcDataCorrections()
                 break;
             case 71085: // Mana Void (periodic aura)
                 spellInfo->DurationIndex = 9; // 30 seconds (missing)
+                break;
+            case 72015: // Frostbolt Volley (only heroic)
+            case 72016: // Frostbolt Volley (only heroic)
+                spellInfo->EffectRadiusIndex[2] = EFFECT_RADIUS_40_YARDS;
                 break;
             case 70936: // Summon Suppressor (needs target selection script)
                 spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ANY;
@@ -3489,62 +3537,62 @@ void SpellMgr::LoadDbcDataCorrections()
             case 73708: // Defile
             case 73709: // Defile
             case 73710: // Defile
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS;   // 200yd
-                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS; // 200yd
+                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_200_YARDS; // 200yd
                 break;
             case 69030: // Val'kyr Target Search
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS;   // 200yd
-                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS; // 200yd
+                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_200_YARDS; // 200yd
                 break;
             case 69198: // Raging Spirit Visual
-                spellInfo->rangeIndex = 13;             // 50000yd
+                spellInfo->rangeIndex = 13; // 50000yd
                 break;
             case 73654: // Harvest Souls
             case 74295: // Harvest Souls
             case 74296: // Harvest Souls
             case 74297: // Harvest Souls
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
-                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
-                spellInfo->EffectRadiusIndex[2] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS; // 50000yd
+                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_50000_YARDS; // 50000yd
+                spellInfo->EffectRadiusIndex[2] = EFFECT_RADIUS_50000_YARDS; // 50000yd
                 break;
             case 73655: // Harvest Soul
                 spellInfo->AttributesEx3 |= SPELL_ATTR3_NO_DONE_BONUS;
                 break;
             case 73540: // Summon Shadow Trap
-                spellInfo->DurationIndex = 23;          // 90 seconds
+                spellInfo->DurationIndex = 23; // 90 seconds
                 break;
             case 73530: // Shadow Trap (visual)
-                spellInfo->DurationIndex = 28;          // 5 seconds
+                spellInfo->DurationIndex = 28; // 5 seconds
                 break;
             case 73529: // Shadow Trap
-                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_10_YARDS;   // 10yd
+                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_10_YARDS; // 10yd
                 break;
             case 74282: // Shadow Trap (searcher)
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_3_YARDS;   // 3yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_3_YARDS; // 3yd
                 break;
             case 72595: // Restore Soul
             case 73650: // Restore Soul
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS; // 200yd
                 break;
             case 74086: // Destroy Soul
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS; // 200yd
                 break;
             case 74302: // Summon Spirit Bomb
             case 74342: // Summon Spirit Bomb
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS; // 200yd
                 spellInfo->MaxAffectedTargets = 1;
                 break;
             case 74341: // Summon Spirit Bomb
             case 74343: // Summon Spirit Bomb
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_200_YARDS; // 200yd
                 spellInfo->MaxAffectedTargets = 3;
                 break;
             case 73579: // Summon Spirit Bomb
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_25_YARDS;   // 25yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_25_YARDS; // 25yd
                 break;
             case 72350: // Fury of Frostmourne
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
-                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS; // 50000yd
+                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_50000_YARDS; // 50000yd
                 break;
             case 75127: // Kill Frostmourne Players
             case 72351: // Fury of Frostmourne
@@ -3552,19 +3600,39 @@ void SpellMgr::LoadDbcDataCorrections()
             case 72429: // Mass Resurrection
             case 73159: // Play Movie
             case 73582: // Trigger Vile Spirit (Inside, Heroic)
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS; // 50000yd
                 break;
             case 72376: // Raise Dead
                 spellInfo->MaxAffectedTargets = 3;
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS;   // 50000yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_50000_YARDS; // 50000yd
                 break;
             case 71809: // Jump
-                spellInfo->rangeIndex = 3;              // 20yd
-                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_25_YARDS;   // 25yd
+                spellInfo->rangeIndex = 3; // 20yd
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_25_YARDS; // 25yd
                 break;
             case 72405: // Broken Frostmourne
-                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_200_YARDS;   // 200yd
+                spellInfo->EffectRadiusIndex[1] = EFFECT_RADIUS_200_YARDS; // 200yd
                 break;
+            // ENDOF ICECROWN CITADEL SPELLS
+            //
+            // RUBY SANCTUM SPELLS
+            //
+            case 74769: // Twilight Cutter
+            case 77844: // Twilight Cutter
+            case 77845: // Twilight Cutter
+            case 77846: // Twilight Cutter
+                spellInfo->EffectRadiusIndex[0] = EFFECT_RADIUS_100_YARDS; // 100yd
+                break;
+            case 75509: // Twilight Mending
+                spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+                spellInfo->AttributesEx2 |= SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS;
+                break;
+            case 75888: // Awaken Flames
+            case 75889: // Awaken Flames
+                spellInfo->AttributesEx |= SPELL_ATTR1_CANT_TARGET_SELF;
+                break;
+            // ENDOF RUBY SANCTUM SPELLS
+            //
             case 40055: // Introspection
             case 40165: // Introspection
             case 40166: // Introspection
@@ -3574,6 +3642,13 @@ void SpellMgr::LoadDbcDataCorrections()
             case 2378: // Minor Fortitude
                 spellInfo->manaCost = 0;
                 spellInfo->manaPerSecond = 0;
+                break;
+            // OCULUS SPELLS
+            // The spells below are here, because their effect 1 is giving warning, because the triggered spell is not found in dbc and is missing from encounter sniff.
+            case 49462: // Call Ruby Drake
+            case 49461: // Call Amber Drake
+            case 49345: // Call Emerald Drake
+                spellInfo->Effect[1] = 0;
                 break;
             default:
                 break;
@@ -3599,6 +3674,5 @@ void SpellMgr::LoadDbcDataCorrections()
     properties = const_cast<SummonPropertiesEntry*>(sSummonPropertiesStore.LookupEntry(647)); // 52893
     properties->Type = SUMMON_TYPE_TOTEM;
 
-    sLog->outInfo(LOG_FILTER_SPELLS_AURAS, ">> Loading spell dbc data corrections  in %u ms", GetMSTimeDiffToNow(oldMSTime));
-
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded spell dbc data corrections in %u ms", GetMSTimeDiffToNow(oldMSTime));
 }

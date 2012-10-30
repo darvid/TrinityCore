@@ -247,7 +247,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
             if (GetSecurity() > SEC_PLAYER && sWorld->getBoolConfig(CONFIG_GM_LOG_TRADE))
             {
                 sLog->outCommand(GetAccountId(), "GM %s (Account: %u) create auction: %s (Entry: %u Count: %u)",
-                    GetPlayerName(), GetAccountId(), item->GetTemplate()->Name1.c_str(), item->GetEntry(), item->GetCount());
+                    GetPlayerName().c_str(), GetAccountId(), item->GetTemplate()->Name1.c_str(), item->GetEntry(), item->GetCount());
             }
 
             AH->item_guidlow = item->GetGUIDLow();
@@ -262,7 +262,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
             AH->deposit = deposit;
             AH->auctionHouseEntry = auctionHouseEntry;
 
-            sLog->outInfo(LOG_FILTER_NETWORKIO, "CMSG_AUCTION_SELL_ITEM: Player %s (guid %d) is selling item %s entry %u (guid %d) to auctioneer %u with count %u with initial bid %u with buyout %u and with time %u (in sec) in auctionhouse %u", _player->GetName(), _player->GetGUIDLow(), item->GetTemplate()->Name1.c_str(), item->GetEntry(), item->GetGUIDLow(), AH->auctioneer, item->GetCount(), bid, buyout, auctionTime, AH->GetHouseId());
+            sLog->outInfo(LOG_FILTER_NETWORKIO, "CMSG_AUCTION_SELL_ITEM: Player %s (guid %d) is selling item %s entry %u (guid %d) to auctioneer %u with count %u with initial bid %u with buyout %u and with time %u (in sec) in auctionhouse %u", _player->GetName().c_str(), _player->GetGUIDLow(), item->GetTemplate()->Name1.c_str(), item->GetEntry(), item->GetGUIDLow(), AH->auctioneer, item->GetCount(), bid, buyout, auctionTime, AH->GetHouseId());
             sAuctionMgr->AddAItem(item);
             auctionHouse->AddAuction(AH);
 
@@ -277,7 +277,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
 
             SendAuctionCommandResult(AH->Id, AUCTION_SELL_ITEM, AUCTION_OK);
 
-            GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CREATE_AUCTION, 1);
+            GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CREATE_AUCTION, 1);
             return;
         }
         else // Required stack size of auction does not match to current item stack size, clone item and set correct stack size
@@ -293,7 +293,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
             if (GetSecurity() > SEC_PLAYER && sWorld->getBoolConfig(CONFIG_GM_LOG_TRADE))
             {
                 sLog->outCommand(GetAccountId(), "GM %s (Account: %u) create auction: %s (Entry: %u Count: %u)",
-                    GetPlayerName(), GetAccountId(), newItem->GetTemplate()->Name1.c_str(), newItem->GetEntry(), newItem->GetCount());
+                    GetPlayerName().c_str(), GetAccountId(), newItem->GetTemplate()->Name1.c_str(), newItem->GetEntry(), newItem->GetCount());
             }
 
             AH->item_guidlow = newItem->GetGUIDLow();
@@ -308,7 +308,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
             AH->deposit = deposit;
             AH->auctionHouseEntry = auctionHouseEntry;
 
-            sLog->outInfo(LOG_FILTER_NETWORKIO, "CMSG_AUCTION_SELL_ITEM: Player %s (guid %d) is selling item %s entry %u (guid %d) to auctioneer %u with count %u with initial bid %u with buyout %u and with time %u (in sec) in auctionhouse %u", _player->GetName(), _player->GetGUIDLow(), newItem->GetTemplate()->Name1.c_str(), newItem->GetEntry(), newItem->GetGUIDLow(), AH->auctioneer, newItem->GetCount(), bid, buyout, auctionTime, AH->GetHouseId());
+            sLog->outInfo(LOG_FILTER_NETWORKIO, "CMSG_AUCTION_SELL_ITEM: Player %s (guid %d) is selling item %s entry %u (guid %d) to auctioneer %u with count %u with initial bid %u with buyout %u and with time %u (in sec) in auctionhouse %u", _player->GetName().c_str(), _player->GetGUIDLow(), newItem->GetTemplate()->Name1.c_str(), newItem->GetEntry(), newItem->GetGUIDLow(), AH->auctioneer, newItem->GetCount(), bid, buyout, auctionTime, AH->GetHouseId());
             sAuctionMgr->AddAItem(newItem);
             auctionHouse->AddAuction(AH);
 
@@ -347,7 +347,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
 
             SendAuctionCommandResult(AH->Id, AUCTION_SELL_ITEM, AUCTION_OK);
 
-            GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CREATE_AUCTION, 1);
+            GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CREATE_AUCTION, 1);
             return;
         }
     }
@@ -438,7 +438,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
 
         auction->bidder = player->GetGUIDLow();
         auction->bid = price;
-        GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, price);
+        GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, price);
 
         PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_AUCTION_BID);
         stmt->setUInt32(0, auction->bidder);
@@ -461,7 +461,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
         }
         auction->bidder = player->GetGUIDLow();
         auction->bid = auction->buyout;
-        GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, auction->buyout);
+        GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, auction->buyout);
 
         //- Mails must be under transaction control too to prevent data loss
         sAuctionMgr->SendAuctionSalePendingMail(auction, trans);

@@ -134,8 +134,9 @@ public:
                             return player;
                 }
             }
+            else
+                sLog->outDebug(LOG_FILTER_TSCR, "Instance Sunwell Plateau: GetPlayerInMap, but PlayerList is empty!");
 
-            sLog->outDebug(LOG_FILTER_TSCR, "Instance Sunwell Plateau: GetPlayerInMap, but PlayerList is empty!");
             return NULL;
         }
 
@@ -276,17 +277,12 @@ public:
             std::ostringstream stream;
             stream << m_auiEncounter[0] << ' '  << m_auiEncounter[1] << ' '  << m_auiEncounter[2] << ' '  << m_auiEncounter[3] << ' '
                 << m_auiEncounter[4] << ' '  << m_auiEncounter[5];
-            char* out = new char[stream.str().length() + 1];
-            strcpy(out, stream.str().c_str());
-            if (out)
-            {
-                OUT_SAVE_INST_DATA_COMPLETE;
-                return out;
-            }
-            return NULL;
+
+            OUT_SAVE_INST_DATA_COMPLETE;
+            return stream.str();
         }
 
-        void Load(const char* in)
+        void Load(char const* in)
         {
             if (!in)
             {
@@ -304,7 +300,6 @@ public:
             OUT_LOAD_INST_DATA_COMPLETE;
         }
     };
-
 };
 
 void AddSC_instance_sunwell_plateau()

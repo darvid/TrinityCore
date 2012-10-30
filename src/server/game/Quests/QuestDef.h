@@ -90,7 +90,7 @@ enum __QuestTradeSkill
     QUEST_TRSKILL_MINING         = 11,
     QUEST_TRSKILL_FISHING        = 12,
     QUEST_TRSKILL_SKINNING       = 13,
-    QUEST_TRSKILL_JEWELCRAFTING  = 14,
+    QUEST_TRSKILL_JEWELCRAFTING  = 14
 };
 
 enum QuestStatus
@@ -158,7 +158,7 @@ enum __QuestFlags
     QUEST_TRINITY_FLAGS_SPEAKTO              = 0x08000000,   // Internal flag computed only
     QUEST_TRINITY_FLAGS_KILL_OR_CAST         = 0x10000000,   // Internal flag computed only
     QUEST_TRINITY_FLAGS_TIMED                = 0x20000000,   // Internal flag computed only
-    QUEST_TRINITY_FLAGS_PLAYER_KILL          = 0x40000000,   // Internal flag computed only
+    QUEST_TRINITY_FLAGS_PLAYER_KILL          = 0x40000000    // Internal flag computed only
 };
 
 struct QuestLocale
@@ -194,7 +194,7 @@ class Quest
         int32  GetZoneOrSort() const { return ZoneOrSort; }
         uint32 GetMinLevel() const { return MinLevel; }
         uint32 GetMaxLevel() const { return MaxLevel; }
-        uint32 GetQuestLevel() const { return Level; }
+        int32  GetQuestLevel() const { return Level; }
         uint32 GetType() const { return Type; }
         uint32 GetRequiredClasses() const { return RequiredClasses; }
         uint32 GetRequiredRaces() const { return RequiredRaces; }
@@ -222,18 +222,17 @@ class Quest
         uint32 GetSrcItemId() const { return SourceItemId; }
         uint32 GetSrcItemCount() const { return SourceItemIdCount; }
         uint32 GetSrcSpell() const { return SourceSpellid; }
-        std::string GetTitle() const { return Title; }
-        std::string GetDetails() const { return Details; }
-        std::string GetObjectives() const { return Objectives; }
-        std::string GetOfferRewardText() const { return OfferRewardText; }
-        std::string GetRequestItemsText() const { return RequestItemsText; }
-        std::string GetEndText() const { return EndText; }
-        std::string GetCompletedText() const { return CompletedText; }
+        std::string const& GetTitle() const { return Title; }
+        std::string const& GetDetails() const { return Details; }
+        std::string const& GetObjectives() const { return Objectives; }
+        std::string const& GetOfferRewardText() const { return OfferRewardText; }
+        std::string const& GetRequestItemsText() const { return RequestItemsText; }
+        std::string const& GetEndText() const { return EndText; }
+        std::string const& GetCompletedText() const { return CompletedText; }
         int32  GetRewOrReqMoney() const;
         uint32 GetRewHonorAddition() const { return RewardHonor; }
         float GetRewHonorMultiplier() const { return RewardHonorMultiplier; }
-        uint32 GetRewMoneyMaxLevel() const { return RewardMoneyMaxLevel; }
-                                                            // use in XP calculation at client
+        uint32 GetRewMoneyMaxLevel() const { return RewardMoneyMaxLevel; } // use in XP calculation at client
         uint32 GetRewSpell() const { return RewardSpell; }
         int32  GetRewSpellCast() const { return RewardSpellCast; }
         uint32 GetRewMailTemplateId() const { return RewardMailTemplateId; }

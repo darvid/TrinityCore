@@ -537,7 +537,6 @@ public:
             if (!Fandral || !Arygos || !Caelestrasz || !Merithra)
                 return;
 
-            Unit* mob = NULL;
             AnimationTimer = EventAnim[AnimationCount].Timer;
             if (eventEnd == false)
             {
@@ -720,6 +719,7 @@ public:
                     case 51:
                     {
                         uint32 entries[4] = { 15423, 15424, 15414, 15422 };
+                        Unit* mob = NULL;
                         for (uint8 i = 0; i < 4; ++i)
                         {
                             mob = player->FindNearestCreature(entries[i], 50, me);
@@ -844,9 +844,6 @@ public:
 
         void UpdateAI(const uint32 diff)
         {
-            Unit* target = NULL;
-            //Player* player = me->GetPlayer(PlayerGUID);
-
             if (!Timers)
             {
                 if (me->GetEntry() == 15424 || me->GetEntry() == 15422 || me->GetEntry() == 15414) //all but Kaldorei Soldiers
@@ -890,6 +887,7 @@ public:
             }
             if (!hasTarget)
             {
+                Unit* target = NULL;
                 if (me->GetEntry() == 15424 || me->GetEntry() == 15422 || me->GetEntry() == 15414)
                     target = me->FindNearestCreature(15423, 20, true);
                 if (me->GetEntry() == 15423)
@@ -1291,37 +1289,37 @@ class go_wind_stone : public GameObjectScript
             {
                 case TEMPLAR:
                 {
-                    if (player->HasItemCount(ITEM_TEMPLAR_FIRE, 1))
+                    if (player->HasItemCount(ITEM_TEMPLAR_FIRE))
                         result |= FIRE;
-                    if (player->HasItemCount(ITEM_TEMPLAR_WATER, 1))
+                    if (player->HasItemCount(ITEM_TEMPLAR_WATER))
                         result |= WATER;
-                    if (player->HasItemCount(ITEM_TEMPLAR_EARTH, 1))
+                    if (player->HasItemCount(ITEM_TEMPLAR_EARTH))
                         result |= EARTH;
-                    if (player->HasItemCount(ITEM_TEMPLAR_AIR, 1))
+                    if (player->HasItemCount(ITEM_TEMPLAR_AIR))
                         result |= AIR;
                     break;
                 }
                 case DUKE:
                 {
-                    if (player->HasItemCount(ITEM_DUKE_FIRE, 1))
+                    if (player->HasItemCount(ITEM_DUKE_FIRE))
                         result |= FIRE;
-                    if (player->HasItemCount(ITEM_DUKE_WATER, 1))
+                    if (player->HasItemCount(ITEM_DUKE_WATER))
                         result |= WATER;
-                    if (player->HasItemCount(ITEM_DUKE_EARTH, 1))
+                    if (player->HasItemCount(ITEM_DUKE_EARTH))
                         result |= EARTH;
-                    if (player->HasItemCount(ITEM_DUKE_AIR, 1))
+                    if (player->HasItemCount(ITEM_DUKE_AIR))
                         result |= AIR;
                     break;
                 }
                 case ROYAL:
                 {
-                    if (player->HasItemCount(ITEM_ROYAL_FIRE, 1))
+                    if (player->HasItemCount(ITEM_ROYAL_FIRE))
                         result |= FIRE;
-                    if (player->HasItemCount(ITEM_ROYAL_WATER, 1))
+                    if (player->HasItemCount(ITEM_ROYAL_WATER))
                         result |= WATER;
-                    if (player->HasItemCount(ITEM_ROYAL_EARTH, 1))
+                    if (player->HasItemCount(ITEM_ROYAL_EARTH))
                         result |= EARTH;
-                    if (player->HasItemCount(ITEM_ROYAL_AIR, 1))
+                    if (player->HasItemCount(ITEM_ROYAL_AIR))
                         result |= AIR;
                     break;
                 }

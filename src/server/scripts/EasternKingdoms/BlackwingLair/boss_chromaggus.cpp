@@ -240,14 +240,12 @@ public:
             //Affliction_Timer
             if (Affliction_Timer <= diff)
             {
-                std::list<HostileReference*> threatlist = me->getThreatManager().getThreatList();
-                for (std::list<HostileReference*>::const_iterator i = threatlist.begin(); i != threatlist.end(); ++i)
+                ThreatContainer::StorageType threatlist = me->getThreatManager().getThreatList();
+                for (ThreatContainer::StorageType::const_iterator i = threatlist.begin(); i != threatlist.end(); ++i)
                 {
-                    Unit* unit;
                     if ((*i) && (*i)->getSource())
                     {
-                        unit = Unit::GetUnit(*me, (*i)->getUnitGuid());
-                        if (unit)
+                        if (Unit* unit = Unit::GetUnit(*me, (*i)->getUnitGuid()))
                         {
                             //Cast affliction
                             DoCast(unit, RAND(SPELL_BROODAF_BLUE, SPELL_BROODAF_BLACK,

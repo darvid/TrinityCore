@@ -64,7 +64,7 @@ public:
             { "add",                    SEC_ADMINISTRATOR,      true,   NULL,                                           "", addDisableCommandTable },
             { "remove",                 SEC_ADMINISTRATOR,      true,   NULL,                                           "", removeDisableCommandTable },
             { NULL,                     0,                      false,  NULL,                                           "", NULL }
-        }; 
+        };
         static ChatCommand commandTable[] =
         {
             { "disable",                SEC_ADMINISTRATOR,     false,   NULL,                                           "", disableCommandTable },
@@ -90,7 +90,7 @@ public:
         uint32 entry = uint32(atoi(entryStr));
 
         std::string disableTypeStr = "";
- 
+
         switch (disableType)
         {
             case DISABLE_TYPE_SPELL:
@@ -184,12 +184,12 @@ public:
             default:
                 break;
         }
-       
+
         PreparedStatement* stmt = NULL;
         stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_DISABLES);
         stmt->setUInt32(0, entry);
-        stmt->setUInt8(1, disableType);  
-        PreparedQueryResult result = WorldDatabase.Query(stmt); 
+        stmt->setUInt8(1, disableType);
+        PreparedQueryResult result = WorldDatabase.Query(stmt);
         if (result)
         {
             handler->PSendSysMessage("This %s (Id: %u) is already disabled.", disableTypeStr.c_str(), entry);
@@ -314,8 +314,8 @@ public:
         PreparedStatement* stmt = NULL;
         stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_DISABLES);
         stmt->setUInt32(0, entry);
-        stmt->setUInt8(1, disableType);  
-        PreparedQueryResult result = WorldDatabase.Query(stmt); 
+        stmt->setUInt8(1, disableType);
+        PreparedQueryResult result = WorldDatabase.Query(stmt);
         if (!result)
         {
             handler->PSendSysMessage("This %s (Id: %u) is not disabled.", disableTypeStr.c_str(), entry);

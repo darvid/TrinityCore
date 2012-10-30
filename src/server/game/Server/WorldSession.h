@@ -54,6 +54,7 @@ struct LfgJoinResultData;
 struct LfgLockStatus;
 struct LfgPlayerBoot;
 struct LfgProposal;
+struct LfgQueueStatusData;
 struct LfgReward;
 struct LfgRoleCheck;
 struct LfgUpdateData;
@@ -68,7 +69,7 @@ enum AccountDataType
     GLOBAL_MACROS_CACHE             = 4,                    // 0x10 g
     PER_CHARACTER_MACROS_CACHE      = 5,                    // 0x20 p
     PER_CHARACTER_LAYOUT_CACHE      = 6,                    // 0x40 p
-    PER_CHARACTER_CHAT_CACHE        = 7,                    // 0x80 p
+    PER_CHARACTER_CHAT_CACHE        = 7                     // 0x80 p
 };
 
 #define NUM_ACCOUNT_DATA_TYPES        8
@@ -123,6 +124,16 @@ enum PartyResult
     ERR_PARTY_LFG_BOOT_DUNGEON_COMPLETE = 28,
     ERR_PARTY_LFG_BOOT_LOOT_ROLLS       = 29,
     ERR_PARTY_LFG_TELEPORT_IN_COMBAT    = 30
+};
+
+
+enum BFLeaveReason
+{
+    BF_LEAVE_REASON_CLOSE     = 0x00000001,
+    //BF_LEAVE_REASON_UNK1      = 0x00000002, (not used)
+    //BF_LEAVE_REASON_UNK2      = 0x00000004, (not used)
+    BF_LEAVE_REASON_EXITED    = 0x00000008,
+    BF_LEAVE_REASON_LOW_LEVEL = 0x00000010
 };
 
 enum ChatRestrictionType
@@ -186,7 +197,7 @@ class CharacterCreateInfo
     friend class Player;
 
     protected:
-        CharacterCreateInfo(std::string name, uint8 race, uint8 cclass, uint8 gender, uint8 skin, uint8 face, uint8 hairStyle, uint8 hairColor, uint8 facialHair, uint8 outfitId,
+        CharacterCreateInfo(std::string const& name, uint8 race, uint8 cclass, uint8 gender, uint8 skin, uint8 face, uint8 hairStyle, uint8 hairColor, uint8 facialHair, uint8 outfitId,
         WorldPacket& data) : Name(name), Race(race), Class(cclass), Gender(gender), Skin(skin), Face(face), HairStyle(hairStyle), HairColor(hairColor), FacialHair(facialHair),
         OutfitId(outfitId), Data(data), CharCount(0)
         {}
@@ -223,8 +234,6 @@ class WorldSession
         bool PlayerLogoutWithSave() const { return m_playerLogout && m_playerSave; }
         bool PlayerRecentlyLoggedOut() const { return m_playerRecentlyLogout; }
 
-        void SizeError(WorldPacket const& packet, uint32 size) const;
-
         void ReadAddonsInfo(WorldPacket& data);
         void SendAddonsInfo();
 
@@ -234,8 +243,8 @@ class WorldSession
         void SendPacket(WorldPacket const* packet);
         void SendNotification(const char *format, ...) ATTR_PRINTF(2, 3);
         void SendNotification(uint32 string_id, ...);
-        void SendPetNameInvalid(uint32 error, const std::string& name, DeclinedName *declinedName);
-        void SendPartyResult(PartyOperation operation, const std::string& member, PartyResult res, uint32 val = 0);
+        void SendPetNameInvalid(uint32 error, std::string const& name, DeclinedName *declinedName);
+        void SendPartyResult(PartyOperation operation, std::string const& member, PartyResult res, uint32 val = 0);
         void SendAreaTriggerMessage(const char* Text, ...) ATTR_PRINTF(2, 3);
         void SendSetPhaseShift(uint32 phaseShift);
         void SendQueryTimeResponse();
@@ -246,14 +255,16 @@ class WorldSession
         AccountTypes GetSecurity() const { return _security; }
         uint32 GetAccountId() const { return _accountId; }
         Player* GetPlayer() const { return _player; }
-        char const* GetPlayerName() const;
+        std::string const& GetPlayerName() const;
+        std::string GetPlayerInfo() const;
+
         uint32 GetGuidLow() const;
         void SetSecurity(AccountTypes security) { _security = security; }
         std::string const& GetRemoteAddress() { return m_Address; }
         void SetPlayer(Player* player);
         uint8 Expansion() const { return m_expansion; }
 
-        void InitWarden(BigNumber* k, std::string os);
+        void InitWarden(BigNumber* k, std::string const& os);
 
         /// Session in auth.queue currently
         void SetInQueue(bool state) { m_inQueue = state; }
@@ -286,7 +297,7 @@ class WorldSession
         void SendNameQueryOpcode(uint64 guid);
 
         void SendTrainerList(uint64 guid);
-        void SendTrainerList(uint64 guid, const std::string& strTitle);
+        void SendTrainerList(uint64 guid, std::string const& strTitle);
         void SendListInventory(uint64 guid);
         void SendShowBank(uint64 guid);
         void SendTabardVendorActivate(uint64 guid);
@@ -315,7 +326,7 @@ class WorldSession
 
         // Account Data
         AccountData* GetAccountData(AccountDataType type) { return &m_accountData[type]; }
-        void SetAccountData(AccountDataType type, time_t tm, std::string data);
+        void SetAccountData(AccountDataType type, time_t tm, std::string const& data);
         void SendAccountDataTimes(uint32 mask);
         void LoadGlobalAccountData();
         void LoadAccountData(PreparedQueryResult result, uint32 mask);
@@ -352,7 +363,7 @@ class WorldSession
         void SendDiscoverNewTaxiNode(uint32 nodeid);
 
         // Guild/Arena Team
-        void SendArenaTeamCommandResult(uint32 team_action, const std::string& team, const std::string& player, uint32 error_id);
+        void SendArenaTeamCommandResult(uint32 team_action, std::string const& team, std::string const& player, uint32 error_id);
         void SendNotInArenaTeamPacket(uint8 type);
         void SendPetitionShowList(uint64 guid);
 
@@ -474,7 +485,7 @@ class WorldSession
         void HandleEmoteOpcode(WorldPacket& recvPacket);
         void HandleContactListOpcode(WorldPacket& recvPacket);
         void HandleAddFriendOpcode(WorldPacket& recvPacket);
-        void HandleAddFriendOpcodeCallBack(PreparedQueryResult result, std::string friendNote);
+        void HandleAddFriendOpcodeCallBack(PreparedQueryResult result, std::string const& friendNote);
         void HandleDelFriendOpcode(WorldPacket& recvPacket);
         void HandleAddIgnoreOpcode(WorldPacket& recvPacket);
         void HandleAddIgnoreOpcodeCallBack(PreparedQueryResult result);
@@ -693,8 +704,8 @@ class WorldSession
 
         bool processChatmessageFurtherAfterSecurityChecks(std::string&, uint32);
         void HandleMessagechatOpcode(WorldPacket& recvPacket);
-        void SendPlayerNotFoundNotice(std::string name);
-        void SendPlayerAmbiguousNotice(std::string name);
+        void SendPlayerNotFoundNotice(std::string const& name);
+        void SendPlayerAmbiguousNotice(std::string const& name);
         void SendWrongFactionNotice();
         void SendChatRestrictedNotice(ChatRestrictionType restriction);
         void HandleTextEmoteOpcode(WorldPacket& recvPacket);
@@ -754,7 +765,7 @@ class WorldSession
         void HandleSetActionBarToggles(WorldPacket& recv_data);
 
         void HandleCharRenameOpcode(WorldPacket& recv_data);
-        void HandleChangePlayerNameOpcodeCallBack(PreparedQueryResult result, std::string newName);
+        void HandleChangePlayerNameOpcodeCallBack(PreparedQueryResult result, std::string const& newName);
         void HandleSetPlayerDeclinedNames(WorldPacket& recv_data);
 
         void HandleTotemDestroyed(WorldPacket& recv_data);
@@ -786,7 +797,16 @@ class WorldSession
         void HandleResetInstancesOpcode(WorldPacket& recv_data);
         void HandleHearthAndResurrect(WorldPacket& recv_data);
         void HandleInstanceLockResponse(WorldPacket& recvPacket);
-        void HandleUpdateMissileTrajectory(WorldPacket& recvPacket);
+
+        // Battlefield
+        void SendBfInvitePlayerToWar(uint32 BattleId,uint32 ZoneId,uint32 time);
+        void SendBfInvitePlayerToQueue(uint32 BattleId);
+        void SendBfQueueInviteResponse(uint32 BattleId,uint32 ZoneId, bool CanQueue = true, bool Full = false);
+        void SendBfEntered(uint32 BattleId);
+        void SendBfLeaveMessage(uint32 BattleId, BFLeaveReason reason = BF_LEAVE_REASON_EXITED);
+        void HandleBfQueueInviteResponse(WorldPacket &recv_data);
+        void HandleBfEntryInviteResponse(WorldPacket &recv_data);
+        void HandleBfExitRequest(WorldPacket &recv_data);
 
         // Looking for Dungeon/Raid
         void HandleLfgSetCommentOpcode(WorldPacket& recv_data);
@@ -798,19 +818,20 @@ class WorldSession
         void HandleLfgProposalResultOpcode(WorldPacket& recv_data);
         void HandleLfgSetBootVoteOpcode(WorldPacket& recv_data);
         void HandleLfgTeleportOpcode(WorldPacket& recv_data);
-        void HandleLfrSearchOpcode(WorldPacket& recv_data);
+        void HandleLfrJoinOpcode(WorldPacket& recv_data);
         void HandleLfrLeaveOpcode(WorldPacket& recv_data);
+        void HandleLfgGetStatus(WorldPacket& recv_data);
 
         void SendLfgUpdatePlayer(const LfgUpdateData& updateData);
         void SendLfgUpdateParty(const LfgUpdateData& updateData);
         void SendLfgRoleChosen(uint64 guid, uint8 roles);
-        void SendLfgRoleCheckUpdate(const LfgRoleCheck* pRoleCheck);
-        void SendLfgUpdateSearch(bool update);
+        void SendLfgRoleCheckUpdate(const LfgRoleCheck& pRoleCheck);
+        void SendLfgLfrList(bool update);
         void SendLfgJoinResult(const LfgJoinResultData& joinData);
-        void SendLfgQueueStatus(uint32 dungeon, int32 waitTime, int32 avgWaitTime, int32 waitTimeTanks, int32 waitTimeHealer, int32 waitTimeDps, uint32 queuedTime, uint8 tanks, uint8 healers, uint8 dps);
+        void SendLfgQueueStatus(const LfgQueueStatusData& queueData);
         void SendLfgPlayerReward(uint32 rdungeonEntry, uint32 sdungeonEntry, uint8 done, const LfgReward* reward, const Quest *qRew);
-        void SendLfgBootPlayer(const LfgPlayerBoot* pBoot);
-        void SendLfgUpdateProposal(uint32 proposalId, const LfgProposal *pProp);
+        void SendLfgBootProposalUpdate(const LfgPlayerBoot& boot);
+        void SendLfgUpdateProposal(uint32 proposalId, const LfgProposal& proposal);
         void SendLfgDisabled();
         void SendLfgOfferContinue(uint32 dungeonEntry);
         void SendLfgTeleportError(uint8 err);
@@ -914,6 +935,7 @@ class WorldSession
         void HandleEjectPassenger(WorldPacket& data);
         void HandleEnterPlayerVehicle(WorldPacket& data);
         void HandleUpdateProjectilePosition(WorldPacket& recvPacket);
+        void HandleUpdateMissileTrajectory(WorldPacket& recvPacket);
 
     private:
         void InitializeQueryCallbackParameters();
