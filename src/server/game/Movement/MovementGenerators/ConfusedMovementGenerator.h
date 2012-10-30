@@ -22,11 +22,13 @@
 #include "MovementGenerator.h"
 #include "Timer.h"
 
+#define MAX_CONF_WAYPOINTS 24 //! Allows a twelve second confusion if i_nextMove always is the absolute minimum timer.
+
 template<class T>
 class ConfusedMovementGenerator : public MovementGeneratorMedium< T, ConfusedMovementGenerator<T> >
 {
     public:
-        explicit ConfusedMovementGenerator() : _nextMoveTime(0) {}
+        explicit ConfusedMovementGenerator() : i_nextMoveTime(0) {}
 
         void Initialize(T &);
         void Finalize(T &);
@@ -35,8 +37,11 @@ class ConfusedMovementGenerator : public MovementGeneratorMedium< T, ConfusedMov
 
         MovementGeneratorType GetMovementGeneratorType() { return CONFUSED_MOTION_TYPE; }
     private:
-        TimeTracker _nextMoveTime;
-        float _x, _y, _z;
+        void _InitSpecific(T &, bool &, bool &);
+        TimeTracker i_nextMoveTime;
+        float i_waypoints[MAX_CONF_WAYPOINTS+1][3];
+        uint32 i_nextMove;
+        float i_x, i_y, i_z;
 };
 #endif
 

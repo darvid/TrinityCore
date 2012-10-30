@@ -44,7 +44,6 @@ void ConfusedMovementGenerator<T>::Initialize(T &unit)
     i_nextMove = 1;
 
     bool is_water_ok, is_land_ok;
-    _InitSpecific(unit, is_water_ok, is_land_ok);
 
     for (uint8 idx = 0; idx < MAX_CONF_WAYPOINTS + 1; ++idx)
     {
@@ -86,10 +85,25 @@ void ConfusedMovementGenerator<T>::Initialize(T &unit)
     unit.AddUnitState(UNIT_STATE_CONFUSED | UNIT_STATE_CONFUSED_MOVE);
 }
 
+template<>
+void ConfusedMovementGenerator<Creature>::_InitSpecific(Creature &creature, bool &is_water_ok, bool &is_land_ok)
+{
+    is_water_ok = creature.canSwim();
+    is_land_ok  = creature.canWalk();
+}
+
+template<>
+void ConfusedMovementGenerator<Player>::_InitSpecific(Player &, bool &is_water_ok, bool &is_land_ok)
+{
+    is_water_ok = true;
+    is_land_ok  = true;
+}
+
 template<class T>
 void ConfusedMovementGenerator<T>::Reset(T &unit)
 {
-    _nextMoveTime.Reset(0);
+    i_nextMove = 1;
+    i_nextMoveTime.Reset(0);
     unit.AddUnitState(UNIT_STATE_CONFUSED | UNIT_STATE_CONFUSED_MOVE);
     unit.StopMoving();
 }
@@ -100,26 +114,26 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
     if (unit.HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED | UNIT_STATE_DISTRACTED))
         return true;
 
-    if (_nextMoveTime.Passed())
+    if (i_nextMoveTime.Passed())
     {
         // currently moving, update location
         unit.AddUnitState(UNIT_STATE_CONFUSED_MOVE);
 
         if (unit.movespline->Finalized())
-            _nextMoveTime.Reset(urand(800, 1500));
+            i_nextMoveTime.Reset(urand(800, 1500));
     }
     else
     {
         // waiting for next move
-        _nextMoveTime.Update(diff);
-        if (_nextMoveTime.Passed())
+        i_nextMoveTime.Update(diff);
+        if (i_nextMoveTime.Passed())
         {
             // start moving
             unit.AddUnitState(UNIT_STATE_CONFUSED_MOVE);
 
-            float x = _x + 10.0f*((float)rand_norm() - 0.5f);
-            float y = _y + 10.0f*((float)rand_norm() - 0.5f);
-            float z = _z + 0.5f;
+            float x = i_x + 10.0f*((float)rand_norm() - 0.5f);
+            float y = i_y + 10.0f*((float)rand_norm() - 0.5f);
+            float z = i_z + 0.5f;
 
             Trinity::NormalizeMapCoord(x);
             Trinity::NormalizeMapCoord(y);
@@ -127,7 +141,7 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
             unit.UpdateAllowedPositionZ(x, y, z);
 
             if (z <= INVALID_HEIGHT)
-                _z = unit.GetBaseMap()->GetHeight(unit.GetPhaseMask(), x, y, MAX_HEIGHT) + 2.0f;
+                i_z = unit.GetBaseMap()->GetHeight(unit.GetPhaseMask(), x, y, MAX_HEIGHT) + 2.0f;
 
             PathFinderMovementGenerator path(&unit);
             path.SetPathLengthLimit(30.0f);
@@ -135,7 +149,7 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
 
             if (!unit.IsWithinLOS(x, y, z) || !path.Calculate(x, y, z) || path.GetPathType() & PATHFIND_NOPATH)
             {
-                _nextMoveTime.Reset(urand(200, 500));
+                i_nextMoveTime.Reset(urand(200, 500));
                 return true;
             }
 

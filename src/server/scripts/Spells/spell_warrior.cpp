@@ -240,8 +240,8 @@ class spell_warr_charge : public SpellScriptLoader
                 target->GetFirstCollisionPosition(pos, target->GetObjectSize(), target->GetRelativeAngle(caster));
 
                 PathFinderMovementGenerator moveGen(caster);
-                moveGen.calculate(pos.m_positionX, pos.m_positionY, pos.m_positionZ + target->GetObjectSize());
-                if (!moveGen.m_shouldCharge)
+                moveGen.Calculate(pos.m_positionX, pos.m_positionY, pos.m_positionZ + target->GetObjectSize());
+                if (!moveGen._shouldCharge)
                     return SPELL_FAILED_LINE_OF_SIGHT;
                 return SPELL_CAST_OK;
             }

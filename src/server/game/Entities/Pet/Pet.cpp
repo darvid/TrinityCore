@@ -916,9 +916,6 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
         const float hasteRV = ((Player*)m_owner)->GetRatingBonusValue(CR_HASTE_RANGED);
         const float hasteMM = ((Player*)m_owner)->GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_HASTE);
         const float hasteRM = ((Player*)m_owner)->GetTotalAuraModifier(SPELL_AURA_MOD_RANGED_HASTE);
-        
-        sLog->outString("MV: %d; MR: %d; MM: %d; RM: %d", hasteMV, hasteRV,
-        hasteMM, hasteRM);
 
         ApplyCastTimePercentMod(hasteMV + hasteMM, true);
         ApplyCastTimePercentMod(hasteRV + hasteRM, true);

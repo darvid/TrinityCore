@@ -43,7 +43,7 @@ void RandomMovementGenerator<Creature>::_setRandomLocation(Creature& creature)
     bool is_air_ok = creature.CanFly();
 
     const float angle = float(rand_norm()) * static_cast<float>(M_PI*2.0f);
-    const float range = float(rand_norm()) * wander_distance;
+    const float range = float(rand_norm()) * _wanderDistance;
     const float distanceX = range * std::cos(angle);
     const float distanceY = range * std::sin(angle);
 

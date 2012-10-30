@@ -78,7 +78,7 @@ class PathFinderMovementGenerator
         PointsArray& GetPath() { return _pathPoints; }
         PathType GetPathType() const { return _type; }
 
-        bool m_shouldCharge;
+        bool _shouldCharge;
 
     private:
 

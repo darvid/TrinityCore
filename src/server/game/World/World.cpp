@@ -1692,7 +1692,7 @@ void World::SetInitialWorldSettings()
     sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading Calendar data...");
     sCalendarMgr->LoadFromDB();
 
-    sLog->outString("\nLoading Transmogrification system...");
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Loading Transmogrification system...");
     sTransmogMgr->LoadTransmog();
 
     ///- Initialize game time and timers

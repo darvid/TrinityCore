@@ -43,7 +43,7 @@ class transmog_npc : public CreatureScript
                         gossip_text << "5v5";
                         break;
                     default:
-                        sLog->outError("invalid set with id %d",
+                        sLog->outError(LOG_FILTER_TRANSMOG, "invalid set with id %d",
                             (*set)[TRANSMOG_FIELD_ENTRY]);
                         continue;
                 }

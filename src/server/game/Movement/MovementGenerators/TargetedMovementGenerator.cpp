@@ -87,8 +87,8 @@ void TargetedMovementGeneratorMedium<T,D>::SetTargetLocation(T &owner)
     _recalculateTravel = false;
 
     Movement::MoveSplineInit init(owner);
-    init.MoveTo(x,y,z);
-    init.SetFacing(i_target.getTarget());
+    init.MovebyPath(_path->GetPath());
+    init.SetFacing(_target.getTarget());
     init.SetWalk(((D*)this)->EnableWalking());
     init.Launch();
 }

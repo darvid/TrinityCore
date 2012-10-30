@@ -1,6 +1,7 @@
 #include "AccountMgr.h"
 #include "Chat.h"
 #include "DatabaseEnv.h"
+#include "Log.h"
 #include "TransmogMgr.h"
 
 uint8 NormalizedArenaBrackets[3] = {
@@ -19,7 +20,6 @@ void TransmogMgr::LoadTransmog()
 {
     LoadTransmogrifiedItems();
     LoadPredefinedSets();
-    sLog->outString();
 }
 
 int8 TransmogMgr::TransmogFieldForSlot(int8 slot)
@@ -294,7 +294,7 @@ void TransmogMgr::LoadPredefinedSets()
             fields[TRANSMOG_FIELD_CLASS].GetUInt8());
         _transmogSetStore[rc].push_back(setInfo);
     } while (result->NextRow());
-    sLog->outString(">> Loaded %u predefined transmog sets.",
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u predefined transmog sets.",
         _transmogSetStore.size());
 }
 
@@ -316,6 +316,6 @@ void TransmogMgr::LoadTransmogrifiedItems()
     }
     while (result->NextRow());
 
-    sLog->outString(">> Loaded %u transmogrified items.", 
+    sLog->outInfo(LOG_FILTER_SERVER_LOADING, ">> Loaded %u transmogrified items.", 
         _transmogrifiedItemsStore.size());
 }
