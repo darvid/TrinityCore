@@ -16616,7 +16616,6 @@ void Player::_LoadLifetimeArenaStats(PreparedQueryResult result)
         stmt->setUInt16(7, 0); \
         stmt->setUInt16(8, 0); \
         stmt->setUInt16(9, 0); \
-        stmt->setUInt16(10, 0); \
         m_lifetimeArenaStats[bracket] = {}; \
         trans->Append(stmt);
 
