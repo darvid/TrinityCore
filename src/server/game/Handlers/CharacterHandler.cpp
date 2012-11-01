@@ -981,7 +981,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
     }
 
     if (pCurrChar->HasAtLoginFlag(AT_LOGIN_FIRST))
+    {
+        sScriptMgr->OnPlayerFirstLogin(pCurrChar);
         pCurrChar->RemoveAtLoginFlag(AT_LOGIN_FIRST);
+    }
 
     // show time before shutdown if shutdown planned.
     if (sWorld->IsShuttingDown())

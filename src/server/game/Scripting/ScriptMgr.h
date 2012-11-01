@@ -723,6 +723,9 @@ class PlayerScript : public ScriptObject
         // Called when a player logs in.
         virtual void OnLogin(Player* /*player*/) { }
 
+        // Called on a player's first login.
+        virtual void OnFirstLogin(Player* /*player*/) { }
+
         // Called when a player logs out.
         virtual void OnLogout(Player* /*player*/) { }
 
@@ -1005,6 +1008,7 @@ class ScriptMgr
         void OnPlayerTextEmote(Player* player, uint32 textEmote, uint32 emoteNum, uint64 guid);
         void OnPlayerSpellCast(Player* player, Spell* spell, bool skipCheck);
         void OnPlayerLogin(Player* player);
+        void OnPlayerFirstLogin(Player* player);
         void OnPlayerLogout(Player* player);
         void OnPlayerCreate(Player* player);
         void OnPlayerDelete(uint64 guid);

@@ -1296,6 +1296,11 @@ void ScriptMgr::OnPlayerSpellCast(Player* player, Spell* spell, bool skipCheck)
     FOREACH_SCRIPT(PlayerScript)->OnSpellCast(player, spell, skipCheck);
 }
 
+void ScriptMgr::OnPlayerFirstLogin(Player* player)
+{
+    FOREACH_SCRIPT(PlayerScript)->OnFirstLogin(player);
+}
+
 void ScriptMgr::OnPlayerLogin(Player* player)
 {
     FOREACH_SCRIPT(PlayerScript)->OnLogin(player);
