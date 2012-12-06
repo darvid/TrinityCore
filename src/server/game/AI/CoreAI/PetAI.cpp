@@ -71,8 +71,6 @@ void PetAI::_stopAttack()
     }
 
     me->AttackStop();
-    me->InterruptNonMeleeSpells(false);
-    me->SendMeleeAttackStop(); // Should stop pet's attack button from flashing
     me->GetCharmInfo()->SetIsCommandAttack(false);
     HandleReturnMovement();
 }
@@ -91,8 +89,7 @@ void PetAI::UpdateAI(const uint32 diff)
         m_updateAlliesTimer -= diff;
 
     // me->getVictim() can't be used for check in case stop fighting, me->getVictim() clear at Unit death etc.
-    // Must also check if victim is alive
-    if (me->getVictim() && me->getVictim()->isAlive())
+    if (me->getVictim())
     {
         // is only necessary to stop casting, the pet must not exit combat
         if (me->getVictim()->HasBreakableByDamageCrowdControlAura(me))
@@ -124,16 +121,10 @@ void PetAI::UpdateAI(const uint32 diff)
             if (nextTarget)
                 AttackStart(nextTarget);
             else
-            {
-                me->GetCharmInfo()->SetIsCommandAttack(false);
                 HandleReturnMovement();
-            }
         }
         else
-        {
-            me->GetCharmInfo()->SetIsCommandAttack(false);
             HandleReturnMovement();
-        }
     }
     else if (owner && !me->HasUnitState(UNIT_STATE_FOLLOW)) // no charm info and no victim
         HandleReturnMovement();
@@ -162,56 +153,40 @@ void PetAI::UpdateAI(const uint32 diff)
 
             if (spellInfo->IsPositive())
             {
+                // non combat spells allowed
+                // only pet spells have IsNonCombatSpell and not fit this reqs:
+                // Consume Shadows, Lesser Invisibility, so ignore checks for its
                 if (spellInfo->CanBeUsedInCombat())
                 {
-                    // check spell cooldown
-                    if (me->HasSpellCooldown(spellInfo->Id))
+                    // allow only spell without spell cost or with spell cost but not duration limit
+                    int32 duration = spellInfo->GetDuration();
+                    if ((spellInfo->ManaCost || spellInfo->ManaCostPercentage || spellInfo->ManaPerSecond) && duration > 0)
                         continue;
 
-                    // Check if we're in combat or commanded to attack
-                    if (!me->isInCombat() && !me->GetCharmInfo()->IsCommandAttack())
+                    // allow only spell without cooldown > duration
+                    int32 cooldown = spellInfo->GetRecoveryTime();
+                    if (cooldown >= 0 && duration >= 0 && cooldown > duration)
                         continue;
                 }
 
                 Spell* spell = new Spell(me, spellInfo, TRIGGERED_NONE, 0);
+
                 bool spellUsed = false;
-
-                // Some spells can target enemy or friendly (DK Ghoul's Leap)
-                // Check for enemy first (pet then owner)
-                Unit* target = me->getAttackerForHelper();
-                if (!target && owner)
-                    target = owner->getAttackerForHelper();
-
-                if (target)
+                for (std::set<uint64>::const_iterator tar = m_AllySet.begin(); tar != m_AllySet.end(); ++tar)
                 {
-                    if (CanAttack(target) && spell->CanAutoCast(target))
+                    Unit* target = ObjectAccessor::GetUnit(*me, *tar);
+
+                    //only buff targets that are in combat, unless the spell can only be cast while out of combat
+                    if (!target)
+                        continue;
+
+                    if (spell->CanAutoCast(target))
                     {
                         targetSpellStore.push_back(std::make_pair(target, spell));
                         spellUsed = true;
+                        break;
                     }
                 }
-
-                // No enemy, check friendly
-                if (!spellUsed)
-                {
-                    for (std::set<uint64>::const_iterator tar = m_AllySet.begin(); tar != m_AllySet.end(); ++tar)
-                    {
-                        Unit* ally = ObjectAccessor::GetUnit(*me, *tar);
-
-                        //only buff targets that are in combat, unless the spell can only be cast while out of combat
-                        if (!ally)
-                            continue;
-
-                        if (spell->CanAutoCast(ally))
-                        {
-                            targetSpellStore.push_back(std::make_pair(ally, spell));
-                            spellUsed = true;
-                            break;
-                        }
-                    }
-                }
-
-                // No valid targets at all
                 if (!spellUsed)
                     delete spell;
             }
@@ -310,7 +285,7 @@ void PetAI::KilledUnit(Unit* victim)
     // Can't use _stopAttack() because that activates movement handlers and ignores
     // next target selection
     me->AttackStop();
-    me->InterruptNonMeleeSpells(false);
+    me->GetCharmInfo()->SetIsCommandAttack(false);
     me->SendMeleeAttackStop();  // Stops the pet's 'Attack' button from flashing
 
     Unit* nextTarget = SelectNextTarget();
@@ -318,10 +293,7 @@ void PetAI::KilledUnit(Unit* victim)
     if (nextTarget)
         AttackStart(nextTarget);
     else
-    {
-        me->GetCharmInfo()->SetIsCommandAttack(false);
         HandleReturnMovement(); // Return
-    }
 }
 
 void PetAI::AttackStart(Unit* target)
@@ -442,6 +414,7 @@ void PetAI::HandleReturnMovement()
             }
         }
     }
+
 }
 
 void PetAI::DoAttack(Unit* target, bool chase)
@@ -542,20 +515,4 @@ bool PetAI::CanAttack(Unit* target)
 
     // default, though we shouldn't ever get here
     return false;
-}
-
-void PetAI::ReceiveEmote(Player* player, uint32 emote)
-{
-    if (me->GetOwnerGUID() && me->GetOwnerGUID() == player->GetGUID())
-        switch (emote)
-        {
-            case TEXT_EMOTE_COWER:
-                if (me->isPet() && me->ToPet()->IsPetGhoul())
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
-                break;
-            case TEXT_EMOTE_ANGRY:
-                if (me->isPet() && me->ToPet()->IsPetGhoul())
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_COWER);
-                break;
-        }
 }
