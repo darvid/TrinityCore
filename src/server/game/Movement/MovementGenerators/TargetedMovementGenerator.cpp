@@ -46,6 +46,14 @@ void TargetedMovementGeneratorMedium<T,D>::SetTargetLocation(T &owner)
 
     if (!_offset)
     {
+        float dist_min;
+        dist_min = _target->GetCombatReach() - _target->GetObjectSize() - 1.0f;
+
+        if (dist_min == 0)
+           dist_min = 0.5f;
+        // to nearest contact position
+        _target->GetContactPoint(&owner, x, y, z, dist_min);
+        /*
         // to nearest contact position
         float dist = 0.0f;
         if (targetIsVictim)
@@ -57,6 +65,7 @@ void TargetedMovementGeneratorMedium<T,D>::SetTargetLocation(T &owner)
            _target->GetContactPoint(&owner, x, y, z, dist);
         else
            _target->GetPosition(x,y,z);
+        */
     }
     else
     {
