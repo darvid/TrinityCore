@@ -3009,6 +3009,9 @@ void SpellMgr::LoadDbcDataCorrections()
 
         switch (spellInfo->Id)
         {
+            case 24259: // spell lock silence
+                spellInfo->speed = 80;
+                break;
             case 42730:
                 spellInfo->EffectTriggerSpell[EFFECT_1] = 42739;
                 break;
