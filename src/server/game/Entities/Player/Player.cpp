@@ -21015,23 +21015,7 @@ inline bool Player::_StoreOrEquipNewItem(uint32 vendorslot, uint32 item, uint8 c
         return false;
     }
 
-    ModifyMoney(-price);
-
-    if (crItem->ExtendedCost)                            // case for new honor system
-    {
-        ItemExtendedCostEntry const* iece = sItemExtendedCostStore.LookupEntry(crItem->ExtendedCost);
-        if (iece->reqhonorpoints)
-            ModifyHonorPoints(- int32(iece->reqhonorpoints * count));
-
-        if (iece->reqarenapoints)
-            ModifyArenaPoints(- int32(iece->reqarenapoints * count));
-
-        for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)
-        {
-            if (iece->reqitem[i])
-                DestroyItemCount(iece->reqitem[i], (iece->reqitemcount[i] * count), true);
-        }
-    }
+    PayForVendorItem(crItem, count, price);
 
     Item* it = bStore ?
         StoreNewItem(vDest, item, true) :
@@ -21064,77 +21048,78 @@ inline bool Player::_StoreOrEquipNewItem(uint32 vendorslot, uint32 item, uint8 c
     return true;
 }
 
-// Return true is the bought item has a max count to force refresh of window by caller
-bool Player::BuyItemFromVendorSlot(uint64 vendorguid, uint32 vendorslot, uint32 item, uint8 count, uint8 bag, uint8 slot)
+void Player::PayForVendorItem(VendorItem const* vendorItem, uint8 count, uint32 const calculatedPrice)
+{
+    ModifyMoney(-calculatedPrice);
+
+    if (vendorItem->ExtendedCost)                            // case for new honor system
+    {
+        ItemExtendedCostEntry const* iece = sItemExtendedCostStore.LookupEntry(vendorItem->ExtendedCost);
+        if (iece->reqhonorpoints)
+            ModifyHonorPoints(- int32(iece->reqhonorpoints * count));
+
+        if (iece->reqarenapoints)
+            ModifyArenaPoints(- int32(iece->reqarenapoints * count));
+
+        for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)
+        {
+            if (iece->reqitem[i])
+                DestroyItemCount(iece->reqitem[i], (iece->reqitemcount[i] * count), true);
+        }
+    }
+}
+
+bool Player::CanAffordVendorItem(Creature* creature, VendorItem const* vendorItem, ItemTemplate const *tmpl, uint8 count,
+                                 uint32 calculatedPrice)
 {
     // cheating attempt
     if (count < 1) count = 1;
 
-    // cheating attempt
-    if (slot > MAX_BAG_SIZE && slot !=NULL_SLOT)
-        return false;
-
     if (!isAlive())
         return false;
 
-    ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(item);
-    if (!pProto)
+    if (!tmpl)
     {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, NULL, item, 0);
+        SendBuyError(BUY_ERR_CANT_FIND_ITEM, NULL, tmpl->ItemId, 0);
         return false;
     }
 
-    Creature* creature = GetNPCIfCanInteractWith(vendorguid, UNIT_NPC_FLAG_VENDOR);
     if (!creature)
     {
-        sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: BuyItemFromVendor - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(vendorguid)));
-        SendBuyError(BUY_ERR_DISTANCE_TOO_FAR, NULL, item, 0);
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: BuyItemFromVendor - Unit (GUID: %u) not found or you can't interact with him.", uint32(creature->GetGUIDLow()));
+        SendBuyError(BUY_ERR_DISTANCE_TOO_FAR, NULL, tmpl->ItemId, 0);
         return false;
     }
 
-    VendorItemData const* vItems = creature->GetVendorItems();
-    if (!vItems || vItems->Empty())
-    {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, item, 0);
-        return false;
-    }
-
-    if (vendorslot >= vItems->GetItemCount())
-    {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, item, 0);
-        return false;
-    }
-
-    VendorItem const* crItem = vItems->GetItem(vendorslot);
     // store diff item (cheating)
-    if (!crItem || crItem->item != item)
+    if (!vendorItem || vendorItem->item != tmpl->ItemId)
     {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, item, 0);
+        SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, tmpl->ItemId, 0);
         return false;
     }
 
     // check current item amount if it limited
-    if (crItem->maxcount != 0)
+    if (vendorItem->maxcount != 0)
     {
-        if (creature->GetVendorItemCurrentCount(crItem) < pProto->BuyCount * count)
+        if (creature->GetVendorItemCurrentCount(vendorItem) < tmpl->BuyCount * count)
         {
-            SendBuyError(BUY_ERR_ITEM_ALREADY_SOLD, creature, item, 0);
+            SendBuyError(BUY_ERR_ITEM_ALREADY_SOLD, creature, tmpl->ItemId, 0);
             return false;
         }
     }
 
-    if (pProto->RequiredReputationFaction && (uint32(GetReputationRank(pProto->RequiredReputationFaction)) < pProto->RequiredReputationRank))
+    if (tmpl->RequiredReputationFaction && (uint32(GetReputationRank(tmpl->RequiredReputationFaction)) < tmpl->RequiredReputationRank))
     {
-        SendBuyError(BUY_ERR_REPUTATION_REQUIRE, creature, item, 0);
+        SendBuyError(BUY_ERR_REPUTATION_REQUIRE, creature, tmpl->ItemId, 0);
         return false;
     }
 
-    if (crItem->ExtendedCost)
+    if (vendorItem->ExtendedCost)
     {
-        ItemExtendedCostEntry const* iece = sItemExtendedCostStore.LookupEntry(crItem->ExtendedCost);
+        ItemExtendedCostEntry const* iece = sItemExtendedCostStore.LookupEntry(vendorItem->ExtendedCost);
         if (!iece)
         {
-            sLog->outError(LOG_FILTER_PLAYER, "Item %u have wrong ExtendedCost field value %u", pProto->ItemId, crItem->ExtendedCost);
+            sLog->outError(LOG_FILTER_PLAYER, "Item %u have wrong ExtendedCost field value %u", tmpl->ItemId, vendorItem->ExtendedCost);
             return false;
         }
 
@@ -21171,26 +21156,78 @@ bool Player::BuyItemFromVendorSlot(uint64 vendorguid, uint32 vendorslot, uint32 
         }
     }
 
-    uint32 price = 0;
-    if (crItem->IsGoldRequired(pProto) && pProto->BuyPrice > 0) //Assume price cannot be negative (do not know why it is int32)
+    if (!HasEnoughMoney(calculatedPrice))
     {
-        uint32 maxCount = MAX_MONEY_AMOUNT / pProto->BuyPrice;
+        SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, creature, tmpl->ItemId, 0);
+        return false;
+    }
+
+    return true;
+}
+
+bool Player::CanAffordVendorItem(Creature* creature, uint32 vendorslot, uint32 item, uint8 count, uint32 calculatedPrice)
+{
+    if (!creature)
+    {
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: BuyItemFromVendor - Unit (GUID: %u) not found or you can't interact with him.", uint32(creature->GetGUIDLow()));
+        SendBuyError(BUY_ERR_DISTANCE_TOO_FAR, NULL, item, 0);
+        return false;
+    }
+
+    ItemTemplate const* tmpl = sObjectMgr->GetItemTemplate(item);
+
+    VendorItem const* crItem = creature->GetVendorItemBySlot(vendorslot);
+    if (!crItem)
+    {
+        SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, item, 0);
+        return false;
+    }
+    return CanAffordVendorItem(creature, crItem, tmpl, count, calculatedPrice);
+}
+
+uint32 Player::GetVendorItemPrice(Creature* creature, VendorItem const* vendorItem, ItemTemplate const *tmpl, uint8 count)
+{
+    if (!creature || !vendorItem || !tmpl) return 0;
+    uint32 price = 0;
+    if (vendorItem->IsGoldRequired(tmpl) && tmpl->BuyPrice > 0) //Assume price cannot be negative (do not know why it is int32)
+    {
+        uint32 maxCount = MAX_MONEY_AMOUNT / tmpl->BuyPrice;
         if ((uint32)count > maxCount)
         {
-            sLog->outError(LOG_FILTER_PLAYER, "Player %s tried to buy %u item id %u, causing overflow", GetName().c_str(), (uint32)count, pProto->ItemId);
+            sLog->outError(LOG_FILTER_PLAYER, "Player %s tried to buy %u item id %u, causing overflow", GetName().c_str(), (uint32)count, tmpl->ItemId);
             count = (uint8)maxCount;
         }
-        price = pProto->BuyPrice * count; //it should not exceed MAX_MONEY_AMOUNT
+        price = tmpl->BuyPrice * count; //it should not exceed MAX_MONEY_AMOUNT
 
         // reputation discount
         price = uint32(floor(price * GetReputationPriceDiscount(creature)));
-
-        if (!HasEnoughMoney(price))
-        {
-            SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, creature, item, 0);
-            return false;
-        }
     }
+
+    return price;
+}
+
+// Return true is the bought item has a max count to force refresh of window by caller
+bool Player::BuyItemFromVendorSlot(uint64 vendorguid, uint32 vendorslot, uint32 item, uint8 count, uint8 bag, uint8 slot)
+{
+    // cheating attempt
+    if (slot > MAX_BAG_SIZE && slot !=NULL_SLOT)
+        return false;
+
+    Creature* creature = GetNPCIfCanInteractWith(vendorguid, UNIT_NPC_FLAG_VENDOR);
+
+    if (!creature)
+    {
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: BuyItemFromVendor - Unit (GUID: %u) not found or you can't interact with him.", uint32(creature->GetGUIDLow()));
+        SendBuyError(BUY_ERR_DISTANCE_TOO_FAR, NULL, item, 0);
+        return false;
+    }
+
+    ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(item);
+    VendorItem const* crItem = creature->GetVendorItems()->GetItem(vendorslot);
+
+    uint32 price = GetVendorItemPrice(creature, crItem, pProto, count);
+    if (!CanAffordVendorItem(creature, crItem, pProto, count, price))
+        return false;
 
     if ((bag == NULL_BAG && slot == NULL_SLOT) || IsInventoryPos(bag, slot))
     {
