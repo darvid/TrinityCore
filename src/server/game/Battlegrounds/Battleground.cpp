@@ -518,10 +518,12 @@ inline void Battleground::_ProcessJoin(uint32 diff)
                     WorldPacket status;
                     BattlegroundQueueTypeId bgQueueTypeId = sBattlegroundMgr->BGQueueTypeId(m_TypeID, GetArenaType());
                     uint32 queueSlot = player->GetBattlegroundQueueIndex(bgQueueTypeId);
-                    sBattlegroundMgr->BuildBattlegroundStatusPacket(&status, this, queueSlot, STATUS_IN_PROGRESS, 0, GetStartTime(), GetArenaType(), GetPlayerTeam(itr->first));
+                    sBattlegroundMgr->BuildBattlegroundStatusPacket(&status, this, queueSlot, STATUS_IN_PROGRESS, 0, GetStartTime(), GetArenaType(), player->GetBGTeam());
                     player->GetSession()->SendPacket(&status);
 
-                    player->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
+                    // player->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
+                    player->SetPhaseMask(1, true);
+                    player->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION);
                     player->ResetAllPowers();
                     if (!player->isGameMaster())
                     {
@@ -1175,8 +1177,26 @@ void Battleground::AddPlayer(Player* player)
 
         if (GetStatus() == STATUS_WAIT_JOIN)                 // not started yet
         {
-            player->CastSpell(player, SPELL_ARENA_PREPARATION, true);
+            // player->CastSpell(player, SPELL_ARENA_PREPARATION, true);
+            player->SetPhaseMask(team == ALLIANCE ? 1 : 2, true);
+            player->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION);
             player->ResetAllPowers();
+
+            Powers powerType = player->getPowerType();
+            player->SetPower(powerType, player->GetMaxPower(powerType));
+
+            if (player->getClass() == CLASS_HUNTER)
+                player->CastSpell(player, 883, true); // call pet
+            Pet* pet = player->GetPet();
+            if (pet != NULL)
+            {
+                if (pet->isDead())
+                    pet->setDeathState(ALIVE);
+                pet->SetHealth(pet->GetMaxHealth());
+                pet->SetPower(POWER_MANA, pet->GetMaxPower(POWER_MANA));
+                pet->m_CreatureSpellCooldowns.clear();
+                pet->RemoveAura(55711);
+            }
         }
 
         WorldPacket data(SMSG_ARENA_OPPONENT_UPDATE, 8);
@@ -1441,7 +1461,7 @@ bool Battleground::AddObject(uint32 type, uint32 entry, float x, float y, float 
     // So we must create it specific for this instance
     GameObject* go = new GameObject;
     if (!go->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_GAMEOBJECT), entry, GetBgMap(),
-        PHASEMASK_NORMAL, x, y, z, o, rotation0, rotation1, rotation2, rotation3, 100, GO_STATE_READY))
+        PHASEMASK_ANYWHERE, x, y, z, o, rotation0, rotation1, rotation2, rotation3, 100, GO_STATE_READY))
     {
         sLog->outError(LOG_FILTER_SQL, "Battleground::AddObject: cannot create gameobject (entry: %u) for BG (map: %u, instance id: %u)!",
                 entry, m_MapId, m_InstanceID);
