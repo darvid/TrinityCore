@@ -66,10 +66,15 @@ void BattlegroundRV::PostUpdateImpl(uint32 diff)
                 SwitchDynLos();
                 break;
             case BG_RV_STATE_SWITCH_PILLARS:
-                for (uint8 i = BG_RV_OBJECT_PILAR_1; i <= BG_RV_OBJECT_PULLEY_2; ++i)
-                    DoorOpen(i);
+                for (uint8 i = BG_RV_OBJECT_PILLAR_1; i <= BG_RV_OBJECT_PULLEY_2; ++i)
+                    DoorToggle(i);
+
+                DoorOpen(BG_RV_OBJECT_PILLAR_1);
+                DoorOpen(BG_RV_OBJECT_PILLAR_3);
+
                 TogglePillarCollision();
                 setTimer(BG_RV_PILLAR_SWITCH_TIMER);
+                setState(BG_RV_STATE_SWITCH_PILLARS);
                 break;
         }
     }
@@ -209,16 +214,16 @@ bool BattlegroundRV::SetupBattleground()
         || !AddObject(BG_RV_OBJECT_PULLEY_1, BG_RV_OBJECT_TYPE_PULLEY_1, 700.722290f, -283.990662f, 39.517582f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
         || !AddObject(BG_RV_OBJECT_PULLEY_2, BG_RV_OBJECT_TYPE_PULLEY_2, 826.303833f, -283.996429f, 39.517582f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
     // Pilars
-        || !AddObject(BG_RV_OBJECT_PILAR_1, BG_RV_OBJECT_TYPE_PILAR_1, 763.632385f, -306.162384f, 25.909504f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
-        || !AddObject(BG_RV_OBJECT_PILAR_2, BG_RV_OBJECT_TYPE_PILAR_2, 723.644287f, -284.493256f, 24.648525f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
-        || !AddObject(BG_RV_OBJECT_PILAR_3, BG_RV_OBJECT_TYPE_PILAR_3, 763.611145f, -261.856750f, 25.909504f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
-        || !AddObject(BG_RV_OBJECT_PILAR_4, BG_RV_OBJECT_TYPE_PILAR_4, 802.211609f, -284.493256f, 24.648525f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_1, BG_RV_OBJECT_TYPE_PILLAR_1, 763.632385f, -306.162384f, 25.909504f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_2, BG_RV_OBJECT_TYPE_PILLAR_2, 723.644287f, -284.493256f, 24.648525f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_3, BG_RV_OBJECT_TYPE_PILLAR_3, 763.611145f, -261.856750f, 25.909504f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_4, BG_RV_OBJECT_TYPE_PILLAR_4, 802.211609f, -284.493256f, 24.648525f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
 
     // Pilars Collision
-        || !AddObject(BG_RV_OBJECT_PILAR_COLLISION_1, BG_RV_OBJECT_TYPE_PILAR_COLLISION_1, 763.632385f, -306.162384f, 30.639660f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
-        || !AddObject(BG_RV_OBJECT_PILAR_COLLISION_2, BG_RV_OBJECT_TYPE_PILAR_COLLISION_2, 723.644287f, -284.493256f, 32.382710f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
-        || !AddObject(BG_RV_OBJECT_PILAR_COLLISION_3, BG_RV_OBJECT_TYPE_PILAR_COLLISION_3, 763.611145f, -261.856750f, 30.639660f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
-        || !AddObject(BG_RV_OBJECT_PILAR_COLLISION_4, BG_RV_OBJECT_TYPE_PILAR_COLLISION_4, 802.211609f, -284.493256f, 32.382710f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_COLLISION_1, BG_RV_OBJECT_TYPE_PILLAR_COLLISION_1, 763.632385f, -306.162384f, 30.639660f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_COLLISION_2, BG_RV_OBJECT_TYPE_PILLAR_COLLISION_2, 723.644287f, -284.493256f, 32.382710f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_COLLISION_3, BG_RV_OBJECT_TYPE_PILLAR_COLLISION_3, 763.611145f, -261.856750f, 30.639660f, 0.000000f, 0, 0, 0, RESPAWN_IMMEDIATELY)
+        || !AddObject(BG_RV_OBJECT_PILLAR_COLLISION_4, BG_RV_OBJECT_TYPE_PILLAR_COLLISION_4, 802.211609f, -284.493256f, 32.382710f, 3.141593f, 0, 0, 0, RESPAWN_IMMEDIATELY)
 
 )
     {
@@ -233,11 +238,11 @@ void BattlegroundRV::TogglePillarCollision()
 {
     bool apply = GetPillarCollision();
 
-    for (uint8 i = BG_RV_OBJECT_PILAR_1; i <= BG_RV_OBJECT_PILAR_COLLISION_4; ++i)
+    for (uint8 i = BG_RV_OBJECT_PILLAR_1; i <= BG_RV_OBJECT_PILLAR_COLLISION_4; ++i)
     {
         if (GameObject* gob = GetBgMap()->GetGameObject(BgObjects[i]))
         {
-            if (i >= BG_RV_OBJECT_PILAR_COLLISION_1)
+            if (i >= BG_RV_OBJECT_PILLAR_COLLISION_1)
             {
                 uint32 _state = GO_STATE_READY;
                 if (gob->GetGOInfo()->door.startOpen)
@@ -271,13 +276,13 @@ void BattlegroundRV::SwitchDynLos()
         if (!player)
             continue;
 
-        if(GameObject* pilar = GetBGObject(BG_RV_OBJECT_PILAR_1))
-            pilar->SendUpdateToPlayer(player);
-        if(GameObject* pilar = GetBGObject(BG_RV_OBJECT_PILAR_2))
-            pilar->SendUpdateToPlayer(player);
-        if(GameObject* pilar = GetBGObject(BG_RV_OBJECT_PILAR_3))
-            pilar->SendUpdateToPlayer(player);
-        if(GameObject* pilar = GetBGObject(BG_RV_OBJECT_PILAR_4))
-            pilar->SendUpdateToPlayer(player);
+        if(GameObject* pillar = GetBGObject(BG_RV_OBJECT_PILLAR_1))
+            pillar->SendUpdateToPlayer(player);
+        if(GameObject* pillar = GetBGObject(BG_RV_OBJECT_PILLAR_2))
+            pillar->SendUpdateToPlayer(player);
+        if(GameObject* pillar = GetBGObject(BG_RV_OBJECT_PILLAR_3))
+            pillar->SendUpdateToPlayer(player);
+        if(GameObject* pillar = GetBGObject(BG_RV_OBJECT_PILLAR_4))
+            pillar->SendUpdateToPlayer(player);
     }
 }

@@ -29,20 +29,20 @@ enum BattlegroundRVObjectTypes
     BG_RV_OBJECT_FIREDOOR_1,
     BG_RV_OBJECT_FIREDOOR_2,
 
-    BG_RV_OBJECT_PILAR_1,
-    BG_RV_OBJECT_PILAR_3,
+    BG_RV_OBJECT_PILLAR_1,
+    BG_RV_OBJECT_PILLAR_3,
     BG_RV_OBJECT_GEAR_1,
     BG_RV_OBJECT_GEAR_2,
 
-    BG_RV_OBJECT_PILAR_2,
-    BG_RV_OBJECT_PILAR_4,
+    BG_RV_OBJECT_PILLAR_2,
+    BG_RV_OBJECT_PILLAR_4,
     BG_RV_OBJECT_PULLEY_1,
     BG_RV_OBJECT_PULLEY_2,
 
-    BG_RV_OBJECT_PILAR_COLLISION_1,
-    BG_RV_OBJECT_PILAR_COLLISION_2,
-    BG_RV_OBJECT_PILAR_COLLISION_3,
-    BG_RV_OBJECT_PILAR_COLLISION_4,
+    BG_RV_OBJECT_PILLAR_COLLISION_1,
+    BG_RV_OBJECT_PILLAR_COLLISION_2,
+    BG_RV_OBJECT_PILLAR_COLLISION_3,
+    BG_RV_OBJECT_PILLAR_COLLISION_4,
 
     BG_RV_OBJECT_ELEVATOR_1,
     BG_RV_OBJECT_ELEVATOR_2,
@@ -65,15 +65,15 @@ enum BattlegroundRVObjects
     BG_RV_OBJECT_TYPE_ELEVATOR_1                 = 194582,
     BG_RV_OBJECT_TYPE_ELEVATOR_2                 = 194586,
 
-    BG_RV_OBJECT_TYPE_PILAR_COLLISION_1          = 194580, // axe
-    BG_RV_OBJECT_TYPE_PILAR_COLLISION_2          = 194579, // arena
-    BG_RV_OBJECT_TYPE_PILAR_COLLISION_3          = 194581, // lightning
-    BG_RV_OBJECT_TYPE_PILAR_COLLISION_4          = 194578, // ivory
+    BG_RV_OBJECT_TYPE_PILLAR_COLLISION_1         = 194580, // axe
+    BG_RV_OBJECT_TYPE_PILLAR_COLLISION_2         = 194579, // arena
+    BG_RV_OBJECT_TYPE_PILLAR_COLLISION_3         = 194581, // lightning
+    BG_RV_OBJECT_TYPE_PILLAR_COLLISION_4         = 194578, // ivory
 
-    BG_RV_OBJECT_TYPE_PILAR_1                    = 194583, // axe
-    BG_RV_OBJECT_TYPE_PILAR_2                    = 194584, // arena
-    BG_RV_OBJECT_TYPE_PILAR_3                    = 194585, // lightning
-    BG_RV_OBJECT_TYPE_PILAR_4                    = 194587  // ivory
+    BG_RV_OBJECT_TYPE_PILLAR_1                   = 194583, // axe
+    BG_RV_OBJECT_TYPE_PILLAR_2                   = 194584, // arena
+    BG_RV_OBJECT_TYPE_PILLAR_3                   = 194585, // lightning
+    BG_RV_OBJECT_TYPE_PILLAR_4                   = 194587  // ivory
 };
 
 enum BattlegroundRVData

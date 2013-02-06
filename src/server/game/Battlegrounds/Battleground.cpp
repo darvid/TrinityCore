@@ -1525,6 +1525,26 @@ void Battleground::DoorOpen(uint32 type)
             type, GUID_LOPART(BgObjects[type]), m_MapId, m_InstanceID);
 }
 
+void Battleground::DoorToggle(uint32 type)
+{
+    if (GameObject* obj = GetBgMap()->GetGameObject(BgObjects[type]))
+    {
+        if (obj->GetGoState() == GO_STATE_READY)
+        {
+            obj->SetLootState(GO_ACTIVATED);
+            obj->SetGoState(GO_STATE_ACTIVE);
+        }
+        else if (obj->GetGoState() == GO_STATE_ACTIVE)
+        {
+            obj->SetLootState(GO_READY);
+            obj->SetGoState(GO_STATE_READY);
+        }
+    }
+    else
+        sLog->outError(LOG_FILTER_BATTLEGROUND, "Battleground::DoorOpen: door gameobject (type: %u, GUID: %u) not found for BG (map: %u, instance id: %u)!",
+            type, GUID_LOPART(BgObjects[type]), m_MapId, m_InstanceID);
+}
+
 GameObject* Battleground::GetBGObject(uint32 type)
 {
     GameObject* obj = GetBgMap()->GetGameObject(BgObjects[type]);
