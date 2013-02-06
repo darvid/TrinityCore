@@ -27,6 +27,7 @@
 #include "UpdateData.h"
 #include "ObjectAccessor.h"
 #include "SpellInfo.h"
+#include "TransmogMgr.h"
 
 void WorldSession::HandleSplitItemOpcode(WorldPacket & recv_data)
 {
@@ -690,11 +691,11 @@ void WorldSession::HandleBuyItemInSlotOpcode(WorldPacket & recv_data)
 void WorldSession::HandleBuyItemOpcode(WorldPacket & recv_data)
 {
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Received CMSG_BUY_ITEM");
-    uint64 vendorguid;
+    uint64 vendorGuid;
     uint32 item, slot, count;
     uint8 unk1;
 
-    recv_data >> vendorguid >> item >> slot >> count >> unk1;
+    recv_data >> vendorGuid >> item >> slot >> count >> unk1;
 
     // client expects count starting at 1, and we send vendorslot+1 to client already
     if (slot > 0)
@@ -702,7 +703,143 @@ void WorldSession::HandleBuyItemOpcode(WorldPacket & recv_data)
     else
         return; // cheating
 
-    GetPlayer()->BuyItemFromVendorSlot(vendorguid, slot, item, count, NULL_BAG, NULL_SLOT);
+    Creature* vendor = GetPlayer()->GetNPCIfCanInteractWith(vendorGuid, UNIT_NPC_FLAG_VENDOR);
+
+    if (vendor && vendor->GetCreatureTemplate()->SubName != "Transmog Vendor"
+        && vendor->GetScriptName() != "transmog_multivendor")
+    {
+        GetPlayer()->BuyItemFromVendorSlot(vendorGuid, slot, item, count, NULL_BAG, NULL_SLOT);
+        return;
+    }
+
+    ItemTemplate const* itemProto = sObjectMgr->GetItemTemplate(item);
+    if (!itemProto) return;
+
+    Player* player = GetPlayer();
+
+    EquipmentSlots equipSlot;
+    switch (itemProto->InventoryType)
+    {
+        case INVTYPE_HEAD:
+            equipSlot = EQUIPMENT_SLOT_HEAD;
+            break;
+        case INVTYPE_NECK:
+            equipSlot = EQUIPMENT_SLOT_NECK;
+            break;
+        case INVTYPE_SHOULDERS:
+            equipSlot = EQUIPMENT_SLOT_SHOULDERS;
+            break;
+        case INVTYPE_CLOAK:
+            equipSlot = EQUIPMENT_SLOT_BACK;
+            break;
+        case INVTYPE_CHEST:
+        case INVTYPE_ROBE:
+            equipSlot = EQUIPMENT_SLOT_CHEST;
+            break;
+        case INVTYPE_WRISTS:
+            equipSlot = EQUIPMENT_SLOT_WRISTS;
+            break;
+        case INVTYPE_HANDS:
+            equipSlot = EQUIPMENT_SLOT_HANDS;
+            break;
+        case INVTYPE_WAIST:
+            equipSlot = EQUIPMENT_SLOT_WAIST;
+            break;
+        case INVTYPE_LEGS:
+            equipSlot = EQUIPMENT_SLOT_LEGS;
+            break;
+        case INVTYPE_FEET:
+            equipSlot = EQUIPMENT_SLOT_FEET;
+            break;
+        case INVTYPE_2HWEAPON:
+        case INVTYPE_WEAPON:
+        case INVTYPE_WEAPONMAINHAND:
+            equipSlot = EQUIPMENT_SLOT_MAINHAND;
+            break;
+        case INVTYPE_WEAPONOFFHAND:
+        case INVTYPE_SHIELD:
+            equipSlot = EQUIPMENT_SLOT_OFFHAND;
+            break;
+        case INVTYPE_RANGED:
+        case INVTYPE_RANGEDRIGHT:
+            equipSlot = EQUIPMENT_SLOT_RANGED;
+            break;
+        default:
+            player->GetSession()->SendNotification(
+                "That item can't be equipped/transmogrified!");
+            return;
+    }
+
+    VendorItem const* vendorItem;
+    if (vendor->GetScriptName() == "transmog_multivendor")
+    {
+        uint32 vendorEntry = sTransmogMgr->GetVendorForSlotAndClass(player->getClass(), equipSlot);
+        VendorItemData const* vendorItems = sObjectMgr->GetNpcVendorItemList(vendorEntry);
+        vendorItem = vendorItems->GetItem(slot);
+    }
+    else
+        vendorItem = vendor->GetVendorItemBySlot(slot);
+
+    uint32 const calculatedPrice = player->GetVendorItemPrice(vendor, vendorItem, itemProto, count);
+    if (!player->CanAffordVendorItem(vendor, vendorItem, itemProto, count, calculatedPrice))
+        return;
+
+    /*
+    if (!player->HasItemCount(TRANSMOG_TOKEN, 1, true))
+    {
+        player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, vendor, item, 0);
+        return;
+    }
+    */
+
+    Item* targetItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, equipSlot);
+    if (!targetItem && equipSlot == EQUIPMENT_SLOT_MAINHAND)
+    {
+        equipSlot = EQUIPMENT_SLOT_OFFHAND;
+        targetItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, equipSlot);
+    }
+
+    if (!targetItem)
+    {
+        player->GetSession()->SendNotification("You have no item equipped "
+            "in that slot to transmogrify!");
+        return;
+    }
+
+    uint32 protoSubClass = itemProto->SubClass;
+    uint32 protoClass = itemProto->Class;
+    uint32 targetSubClass = targetItem->GetTemplate()->SubClass;
+
+#define IS_SAME_TYPE(onehand, twohand) (\
+    protoSubClass == onehand && targetSubClass == twohand\
+    || protoSubClass == twohand && targetSubClass == onehand)
+
+    if (itemProto->Class == ITEM_CLASS_WEAPON && protoSubClass != targetSubClass
+        // allow axe <-> 2h axe, sword <-> 2h sword, mace <-> 2h
+        && !IS_SAME_TYPE(ITEM_SUBCLASS_WEAPON_AXE, ITEM_SUBCLASS_WEAPON_AXE2)
+        && !IS_SAME_TYPE(ITEM_SUBCLASS_WEAPON_MACE, ITEM_SUBCLASS_WEAPON_MACE2)
+        && !IS_SAME_TYPE(ITEM_SUBCLASS_WEAPON_SWORD, ITEM_SUBCLASS_WEAPON_SWORD2))
+    {
+        player->GetSession()->SendNotification(
+            "You can't transmog different types of weapons/armor, sorry!");
+    }
+    // disallow offhand weapons -> shields.
+    // shields -> offhand doesn't work because of a check in Item::Transmogrify
+    // that prevents changing from lower armor types to higher (i.e cloth -> mail)
+    else if (protoClass == ITEM_CLASS_ARMOR
+             && protoSubClass == ITEM_SUBCLASS_ARMOR_SHIELD
+             && targetSubClass != ITEM_SUBCLASS_ARMOR_SHIELD)
+    {
+        player->GetSession()->SendNotification("You can't transmog weapons into shields!");
+    }
+    else
+    {
+        if (sTransmogMgr->TransmogItem(player, item, equipSlot) == TRANSMOG_ERR_OK)
+        {
+            // player->DestroyItemCount(TRANSMOG_TOKEN, 1, true);
+            player->PayForVendorItem(vendorItem, count, calculatedPrice);
+        }
+    }
 }
 
 void WorldSession::HandleListInventoryOpcode(WorldPacket & recv_data)

@@ -1213,6 +1213,7 @@ TransmogResult Item::Transmogrify(uint32 newEntry)
         return TRANSMOG_ERR_OK;
     }
 
+    ItemTemplate const* myTmpl = GetTemplate();
     ItemTemplate const* otherTmpl = sObjectMgr->GetItemTemplate(newEntry);
 
     if (!otherTmpl)
@@ -1221,11 +1222,15 @@ TransmogResult Item::Transmogrify(uint32 newEntry)
     if (otherTmpl->Quality == ITEM_QUALITY_POOR)
         return TRANSMOG_ERR_WRONG_QUALITY;
 
+    if (myTmpl->Class == ITEM_CLASS_ARMOR
+        && otherTmpl->SubClass > myTmpl->SubClass)
+        return TRANSMOG_ERR_DIFF_ARMOR;
+
     if (m_transmogrifiedEntry != newEntry)
     {
         sTransmogMgr->SetTransmogrifiedItem(GetGUIDLow(), newEntry);
-        CharacterDatabase.PExecute("INSERT INTO `" TRANSMOG_ITEMS_TABLE "` " 
-            "VALUES (%u, %u) ON DUPLICATE KEY UPDATE entry=%u", 
+        CharacterDatabase.PExecute("INSERT INTO `" TRANSMOG_ITEMS_TABLE "` "
+            "VALUES (%u, %u) ON DUPLICATE KEY UPDATE entry=%u",
             GetGUIDLow(), newEntry, newEntry);
         m_transmogrifiedEntry = newEntry;
     }
@@ -1235,10 +1240,9 @@ TransmogResult Item::Transmogrify(uint32 newEntry)
 
 void Item::RemoveTransmog()
 {
-    if (GetTransmog())
-    {
-        SetTransmog(0);
-        CharacterDatabase.PExecute("DELETE FROM `" TRANSMOG_ITEMS_TABLE "` "
-            "WHERE `guid` = %u", GetGUIDLow());
-    }
+    if (GetTransmog() == 0) return;
+    m_transmogrifiedEntry = 0;
+    CharacterDatabase.PExecute("DELETE FROM `" TRANSMOG_ITEMS_TABLE "` "
+        "WHERE `guid` = %u", GetGUIDLow());
+    sTransmogMgr->SetTransmogrifiedItem(GetGUIDLow(), GetTemplate()->ItemId);
 }

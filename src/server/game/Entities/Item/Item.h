@@ -159,6 +159,9 @@ enum TransmogResult
     TRANSMOG_ERR_UNEQUIPPED_ITEM,
     TRANSMOG_ERR_WRONG_QUALITY,
     TRANSMOG_ERR_DIFF_SLOTS,
+    TRANSMOG_ERR_DIFF_CLASS,
+    TRANSMOG_ERR_DIFF_RACE,
+    TRANSMOG_ERR_DIFF_ARMOR,
     TRANSMOG_ERR_INVALID_SLOT,
     TRANSMOG_ERR_INVALID_SET,
     TRANSMOG_ERR_EMPTY,
@@ -360,6 +363,7 @@ class Item : public Object
         void SetTransmog(uint32 newEntry) { m_transmogrifiedEntry = newEntry; }
         uint32 GetTransmog() { return m_transmogrifiedEntry; }
         void RemoveTransmog();
+        bool IsTransmogrified() { return m_transmogrifiedEntry != 0; }
     private:
         std::string m_text;
         uint8 m_slot;

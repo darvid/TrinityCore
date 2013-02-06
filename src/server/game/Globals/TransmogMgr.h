@@ -12,6 +12,13 @@
 #define TRANSMOG_ITEMS_TABLE "transmog_items"            // characters DB
 #define TRANSMOG_PREDEFINED_SETS_TABLE "transmog_sets"   // world DB
 
+// TODO: move to world config/db
+enum TransmogCurrency
+{
+    OLD_TRANSMOG_TOKEN = 38644,
+    TRANSMOG_TOKEN = 24368
+};
+
 enum TransmogSetFields
 {
     TRANSMOG_FIELD_ENTRY,
@@ -34,7 +41,7 @@ enum TransmogSetFields
 class TransmogMgr
 {
     friend class ACE_Singleton<TransmogMgr, ACE_Null_Mutex>;
-    
+
     public:
         TransmogMgr();
         ~TransmogMgr();
@@ -42,11 +49,17 @@ class TransmogMgr
         typedef std::pair<uint8, uint8> RaceClass;
         typedef std::vector<std::vector<uint32> > TransmogSets;
 
+        typedef std::pair<Classes, EquipmentSlots> ClassSlot;
+        typedef std::map<ClassSlot, uint32> TransmogVendorContainer;
+
+        uint32 GetVendorForSlotAndClass(int8 playerClass, EquipmentSlots slot);
+
         void LoadTransmog();
+        void LoadTransmogVendorEntries();
         void LoadCustomSets(uint32 accountId);
         const int GetNumTransmogSets() { return _transmogSetStore.size(); }
         const int GetNumCustomTransmogSets() {
-            return _transmogCustomSetStore.size(); 
+            return _transmogCustomSetStore.size();
         }
         const int GetTotalTransmogSets() {
             return GetNumTransmogSets() + GetNumCustomTransmogSets();
@@ -74,18 +87,22 @@ class TransmogMgr
         bool SaveCustomSet(Player* player, uint32 accountId, uint32 setId);
 
         uint32 GetTransmogrifiedItemEntry(uint32 itemGuid);
+        int8 RemoveAllTransmogrifiedItems(Player* player);
+        void RemoveTransmogrifiedItem(Player* player, Item* item);
         void RemoveTransmogrifiedItem(uint32 itemGuid);
         void SetTransmogrifiedItem(uint32 itemGuid, uint32 newEntry);
 
     private:
         typedef std::map<RaceClass, TransmogSets> TransmogSetsContainer;
         TransmogSetsContainer _transmogSetStore;
-        
+
         typedef std::map<uint32, TransmogSets> TransmogCustomSetsContainer;
         TransmogCustomSetsContainer _transmogCustomSetStore;
 
         typedef std::map<uint32, uint32> TransmogrifiedItemsContainer;
         TransmogrifiedItemsContainer _transmogrifiedItemsStore;
+
+        TransmogVendorContainer _transmogVendorStore;
 
         int8 TransmogFieldForSlot(int8 slot);
         void LoadTransmogrifiedItems();
